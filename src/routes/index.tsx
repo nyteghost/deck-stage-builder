@@ -140,18 +140,43 @@ function Index() {
                   <span className="font-medium">{totalArea} sq ft</span>
                 </div>
                 {result.ok ? (
-                  <>
-                    <div className="flex justify-between py-0.5">
-                      <span className="text-muted-foreground">Orientation</span>
-                      <span className="font-medium">
-                        {result.decks[0]?.w === 8 ? "8 ft across" : "8 ft deep"}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex justify-between border-t border-border pt-2">
-                      <span className="text-muted-foreground">Decks required</span>
-                      <span className="font-semibold">{result.decks.length}</span>
-                    </div>
-                  </>
+                  (() => {
+                    const count = result.decks.length;
+                    const overDecks = count > INVENTORY.totalDecks;
+                    const pack = packHolders(count);
+                    return (
+                      <>
+                        <div className="flex justify-between py-0.5">
+                          <span className="text-muted-foreground">Orientation</span>
+                          <span className="font-medium">
+                            {result.decks[0]?.w === 8 ? "8 ft across" : "8 ft deep"}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex justify-between border-t border-border pt-2">
+                          <span className="text-muted-foreground">Decks required</span>
+                          <span
+                            className={`font-semibold ${overDecks ? "text-destructive" : ""}`}
+                          >
+                            {count} / {INVENTORY.totalDecks}
+                          </span>
+                        </div>
+                        {pack ? (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Holders: {pack.three}×3-deck, {pack.two}×2-deck, {pack.one}×1-deck
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-xs font-medium text-destructive">
+                            Won&#39;t fit in your holders (cap {HOLDER_CAPACITY} decks: 8×3 + 8×2 + 4×1).
+                          </div>
+                        )}
+                        {overDecks && (
+                          <div className="mt-1 text-xs font-medium text-destructive">
+                            Exceeds your 72-deck inventory by {count - INVENTORY.totalDecks}.
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()
                 ) : (
                   <div className="mt-2 border-t border-border pt-2 font-medium text-destructive">
                     Not buildable
