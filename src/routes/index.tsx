@@ -17,6 +17,31 @@ type Result =
   | { ok: true; decks: Deck[] }
   | { ok: false; reason: string };
 
+const INVENTORY = {
+  totalDecks: 72,
+  holders: { one: 4, two: 8, three: 8 },
+};
+const HOLDER_CAPACITY =
+  INVENTORY.holders.one * 1 +
+  INVENTORY.holders.two * 2 +
+  INVENTORY.holders.three * 3;
+
+/**
+ * Greedy pack: fill the largest holders first so we use the fewest carts.
+ * Returns null if the decks won't fit in the available holders.
+ */
+function packHolders(deckCount: number) {
+  let remaining = deckCount;
+  const three = Math.min(INVENTORY.holders.three, Math.floor(remaining / 3));
+  remaining -= three * 3;
+  const two = Math.min(INVENTORY.holders.two, Math.floor(remaining / 2));
+  remaining -= two * 2;
+  const one = Math.min(INVENTORY.holders.one, remaining);
+  remaining -= one;
+  if (remaining > 0) return null;
+  return { three, two, one };
+}
+
 /**
  * A 4'x8' deck covers two 4'x4' cells. Tiling a W×L stage with the minimum
  * number of decks is equivalent to tiling a (W/4)×(L/4) grid with 1×2
@@ -79,7 +104,7 @@ function Index() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Lay out a stage using the fewest 4&#39;×8&#39; decks possible.
+            Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck + 8×2-deck + 8×3-deck holders.
           </p>
         </header>
 
@@ -115,18 +140,43 @@ function Index() {
                   <span className="font-medium">{totalArea} sq ft</span>
                 </div>
                 {result.ok ? (
-                  <>
-                    <div className="flex justify-between py-0.5">
-                      <span className="text-muted-foreground">Orientation</span>
-                      <span className="font-medium">
-                        {result.decks[0]?.w === 8 ? "8 ft across" : "8 ft deep"}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex justify-between border-t border-border pt-2">
-                      <span className="text-muted-foreground">Decks required</span>
-                      <span className="font-semibold">{result.decks.length}</span>
-                    </div>
-                  </>
+                  (() => {
+                    const count = result.decks.length;
+                    const overDecks = count > INVENTORY.totalDecks;
+                    const pack = packHolders(count);
+                    return (
+                      <>
+                        <div className="flex justify-between py-0.5">
+                          <span className="text-muted-foreground">Orientation</span>
+                          <span className="font-medium">
+                            {result.decks[0]?.w === 8 ? "8 ft across" : "8 ft deep"}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex justify-between border-t border-border pt-2">
+                          <span className="text-muted-foreground">Decks required</span>
+                          <span
+                            className={`font-semibold ${overDecks ? "text-destructive" : ""}`}
+                          >
+                            {count} / {INVENTORY.totalDecks}
+                          </span>
+                        </div>
+                        {pack ? (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Holders: {pack.three}×3-deck, {pack.two}×2-deck, {pack.one}×1-deck
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-xs font-medium text-destructive">
+                            Won&#39;t fit in your holders (cap {HOLDER_CAPACITY} decks: 8×3 + 8×2 + 4×1).
+                          </div>
+                        )}
+                        {overDecks && (
+                          <div className="mt-1 text-xs font-medium text-destructive">
+                            Exceeds your 72-deck inventory by {count - INVENTORY.totalDecks}.
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()
                 ) : (
                   <div className="mt-2 border-t border-border pt-2 font-medium text-destructive">
                     Not buildable
