@@ -104,7 +104,7 @@ function Index() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Lay out a stage using the fewest 4&#39;×8&#39; decks possible.
+            Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck + 8×2-deck + 8×3-deck holders.
           </p>
         </header>
 
