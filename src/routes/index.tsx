@@ -39,11 +39,11 @@ const HOLDER_CAPACITY =
  */
 function packHolders(deckCount: number) {
   let remaining = deckCount;
-  const three = Math.min(INVENTORY.holders.three, Math.floor(remaining / 3));
+  const three = Math.min(INVENTORY.holders.three.count, Math.floor(remaining / 3));
   remaining -= three * 3;
-  const two = Math.min(INVENTORY.holders.two, Math.floor(remaining / 2));
+  const two = Math.min(INVENTORY.holders.two.count, Math.floor(remaining / 2));
   remaining -= two * 2;
-  const one = Math.min(INVENTORY.holders.one, remaining);
+  const one = Math.min(INVENTORY.holders.one.count, remaining);
   remaining -= one;
   if (remaining > 0) return null;
   return { three, two, one };
