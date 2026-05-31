@@ -19,12 +19,19 @@ type Result =
 
 const INVENTORY = {
   totalDecks: 72,
-  holders: { one: 4, two: 8, three: 8 },
+  holders: {
+    // count = how many of this holder you own
+    // capacity = decks it carries
+    // footprint = on-ground size in feet (w × d)
+    one:   { count: 4, capacity: 1, footprint: "4 ft × 8 ft" },
+    two:   { count: 8, capacity: 2, footprint: "8 ft × 8 ft" },
+    three: { count: 8, capacity: 3, footprint: "12 ft × 8 ft" },
+  },
 };
 const HOLDER_CAPACITY =
-  INVENTORY.holders.one * 1 +
-  INVENTORY.holders.two * 2 +
-  INVENTORY.holders.three * 3;
+  INVENTORY.holders.one.count * INVENTORY.holders.one.capacity +
+  INVENTORY.holders.two.count * INVENTORY.holders.two.capacity +
+  INVENTORY.holders.three.count * INVENTORY.holders.three.capacity;
 
 /**
  * Greedy pack: fill the largest holders first so we use the fewest carts.
@@ -32,11 +39,11 @@ const HOLDER_CAPACITY =
  */
 function packHolders(deckCount: number) {
   let remaining = deckCount;
-  const three = Math.min(INVENTORY.holders.three, Math.floor(remaining / 3));
+  const three = Math.min(INVENTORY.holders.three.count, Math.floor(remaining / 3));
   remaining -= three * 3;
-  const two = Math.min(INVENTORY.holders.two, Math.floor(remaining / 2));
+  const two = Math.min(INVENTORY.holders.two.count, Math.floor(remaining / 2));
   remaining -= two * 2;
-  const one = Math.min(INVENTORY.holders.one, remaining);
+  const one = Math.min(INVENTORY.holders.one.count, remaining);
   remaining -= one;
   if (remaining > 0) return null;
   return { three, two, one };
@@ -161,8 +168,12 @@ function Index() {
                           </span>
                         </div>
                         {pack ? (
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            Holders: {pack.three}×3-deck, {pack.two}×2-deck, {pack.one}×1-deck
+                          <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                            <div>
+                              {pack.three}× 3-deck ({INVENTORY.holders.three.footprint}),{" "}
+                              {pack.two}× 2-deck ({INVENTORY.holders.two.footprint}),{" "}
+                              {pack.one}× 1-deck ({INVENTORY.holders.one.footprint})
+                            </div>
                           </div>
                         ) : (
                           <div className="mt-1 text-xs font-medium text-destructive">
