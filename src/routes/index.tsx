@@ -11,61 +11,63 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Deck = { x: number; y: number; w: number; h: number; rot: boolean };
+type Deck = { x: number; y: number; w: number; h: number };
 
-// Greedy layout: fill row-by-row, preferring 8ft length along width, then trim with rotated/cut pieces.
-function layoutDecks(widthFt: number, lengthFt: number): { decks: Deck[]; full: number; cut: Deck[] } {
-  const decks: Deck[] = [];
-  const cut: Deck[] = [];
-  let full = 0;
+type Result =
+  | { ok: true; decks: Deck[] }
+  | { ok: false; reason: string };
 
-  let y = 0;
-  while (y < lengthFt) {
-    const rowH = Math.min(4, lengthFt - y);
-    let x = 0;
-    while (x < widthFt) {
-      const remW = widthFt - x;
-      // Try 8x4 orientation
-      if (remW >= 8 && rowH >= 4) {
-        decks.push({ x, y, w: 8, h: 4, rot: false });
-        full++;
-        x += 8;
-      } else if (remW >= 4 && rowH >= 8 - 4 && false) {
-        // skip
-      } else if (remW >= 4 && rowH >= 4) {
-        // 4x4 half (rotated/half deck or cut)
-        const w = Math.min(4, remW);
-        decks.push({ x, y, w, h: rowH, rot: true });
-        if (w < 4 || rowH < 4) cut.push({ x, y, w, h: rowH, rot: true });
-        else full++; // counts as a deck (rotated)
-        x += w;
-      } else {
-        // cut piece
-        const w = remW;
-        decks.push({ x, y, w, h: rowH, rot: false });
-        cut.push({ x, y, w, h: rowH, rot: false });
-        x += w;
-      }
-    }
-    y += rowH;
+/**
+ * A 4'x8' deck covers two 4'x4' cells. Tiling a W×L stage with the minimum
+ * number of decks is equivalent to tiling a (W/4)×(L/4) grid with 1×2
+ * dominoes. Feasible iff both W and L are multiples of 4 AND at least one
+ * is a multiple of 8 (so the cell grid has an even side).
+ */
+function planStage(widthFt: number, lengthFt: number): Result {
+  if (widthFt <= 0 || lengthFt <= 0) {
+    return { ok: false, reason: "Enter a width and length greater than zero." };
+  }
+  if (widthFt % 4 !== 0 || lengthFt % 4 !== 0) {
+    return {
+      ok: false,
+      reason:
+        "Both width and length must be multiples of 4 ft — 4×8 decks can't be cut to fit otherwise.",
+    };
+  }
+  const a = widthFt / 4;
+  const b = lengthFt / 4;
+  if (a % 2 !== 0 && b % 2 !== 0) {
+    return {
+      ok: false,
+      reason:
+        "This size can't be built from whole 4×8 decks: at least one side must be a multiple of 8 ft.",
+    };
   }
 
-  return { decks, full, cut };
+  const decks: Deck[] = [];
+  if (a % 2 === 0) {
+    for (let j = 0; j < b; j++) {
+      for (let i = 0; i < a; i += 2) {
+        decks.push({ x: i * 4, y: j * 4, w: 8, h: 4 });
+      }
+    }
+  } else {
+    for (let i = 0; i < a; i++) {
+      for (let j = 0; j < b; j += 2) {
+        decks.push({ x: i * 4, y: j * 4, w: 4, h: 8 });
+      }
+    }
+  }
+  return { ok: true, decks };
 }
 
 function Index() {
   const [width, setWidth] = useState(24);
   const [length, setLength] = useState(16);
 
-  const { decks, full, cut } = useMemo(
-    () => layoutDecks(Math.max(0, width), Math.max(0, length)),
-    [width, length],
-  );
-
+  const result = useMemo(() => planStage(width, length), [width, length]);
   const totalArea = width * length;
-  const deckCount = Math.ceil(totalArea / 32);
 
-  // Scale to fit canvas
   const maxPx = 560;
   const scale = Math.min(maxPx / Math.max(width, 1), maxPx / Math.max(length, 1), 32);
   const canvasW = width * scale;
@@ -77,7 +79,7 @@ function Index() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Lay out a stage using standard 4&#39;×8&#39; decks. Enter your target dimensions in feet.
+            Lay out a stage using the fewest 4&#39;×8&#39; decks possible.
           </p>
         </header>
 
@@ -112,73 +114,69 @@ function Index() {
                   <span className="text-muted-foreground">Stage area</span>
                   <span className="font-medium">{totalArea} sq ft</span>
                 </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-muted-foreground">Pieces placed</span>
-                  <span className="font-medium">{decks.length}</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-muted-foreground">Full 4×8 decks</span>
-                  <span className="font-medium">{full}</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-muted-foreground">Cut / partial</span>
-                  <span className="font-medium">{cut.length}</span>
-                </div>
-                <div className="mt-2 flex justify-between border-t border-border pt-2">
-                  <span className="text-muted-foreground">Decks to buy (≥)</span>
-                  <span className="font-semibold">{deckCount}</span>
-                </div>
+                {result.ok ? (
+                  <>
+                    <div className="flex justify-between py-0.5">
+                      <span className="text-muted-foreground">Orientation</span>
+                      <span className="font-medium">
+                        {result.decks[0]?.w === 8 ? "8 ft across" : "8 ft deep"}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex justify-between border-t border-border pt-2">
+                      <span className="text-muted-foreground">Decks required</span>
+                      <span className="font-semibold">{result.decks.length}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-2 border-t border-border pt-2 font-medium text-destructive">
+                    Not buildable
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-            <div className="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 rounded-sm bg-primary" /> Full 4×8
+            {result.ok ? (
+              <>
+                <div className="mb-3 text-xs text-muted-foreground">
+                  Each rectangle is one 4&#39;×8&#39; deck.
+                </div>
+                <div className="overflow-auto">
+                  <div
+                    className="relative border border-border bg-muted/40"
+                    style={{ width: canvasW || 1, height: canvasH || 1 }}
+                  >
+                    {result.decks.map((d, i) => (
+                      <div
+                        key={i}
+                        className="absolute flex items-center justify-center border border-background/60 bg-primary text-[10px] font-medium text-primary-foreground"
+                        style={{
+                          left: d.x * scale,
+                          top: d.y * scale,
+                          width: d.w * scale,
+                          height: d.h * scale,
+                        }}
+                        title={`${d.w}ft × ${d.h}ft`}
+                      >
+                        {d.w}×{d.h}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Scale: 1 ft ≈ {scale.toFixed(1)} px.
+                </p>
+              </>
+            ) : (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+                <p className="font-semibold">Can&#39;t build this stage</p>
+                <p className="mt-1">{result.reason}</p>
+                <p className="mt-2 text-destructive/80">
+                  Try sizes where both dimensions are multiples of 4 ft and at least one is a multiple of 8 ft (e.g. 16×20, 24×16, 32×12).
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 rounded-sm bg-accent-foreground/40" /> Rotated / half
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 rounded-sm bg-destructive/70" /> Cut piece
-              </div>
-            </div>
-
-            <div className="overflow-auto">
-              <div
-                className="relative border border-border bg-muted/40"
-                style={{ width: canvasW || 1, height: canvasH || 1 }}
-              >
-                {decks.map((d, i) => {
-                  const isCut = cut.includes(d);
-                  const bg = isCut
-                    ? "bg-destructive/70"
-                    : d.rot
-                      ? "bg-accent-foreground/40"
-                      : "bg-primary";
-                  return (
-                    <div
-                      key={i}
-                      className={`absolute flex items-center justify-center border border-background/60 text-[10px] font-medium text-primary-foreground ${bg}`}
-                      style={{
-                        left: d.x * scale,
-                        top: d.y * scale,
-                        width: d.w * scale,
-                        height: d.h * scale,
-                      }}
-                      title={`${d.w}ft × ${d.h}ft`}
-                    >
-                      {d.w}×{d.h}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <p className="mt-3 text-xs text-muted-foreground">
-              Scale: 1 ft ≈ {scale.toFixed(1)} px. Dimensions outside multiples of 4 ft will require cut pieces (shown in red).
-            </p>
+            )}
           </div>
         </div>
       </div>
