@@ -168,8 +168,12 @@ function Index() {
                           </span>
                         </div>
                         {pack ? (
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            Holders: {pack.three}×3-deck, {pack.two}×2-deck, {pack.one}×1-deck
+                          <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                            <div>
+                              {pack.three}× 3-deck ({INVENTORY.holders.three.footprint}),{" "}
+                              {pack.two}× 2-deck ({INVENTORY.holders.two.footprint}),{" "}
+                              {pack.one}× 1-deck ({INVENTORY.holders.one.footprint})
+                            </div>
                           </div>
                         ) : (
                           <div className="mt-1 text-xs font-medium text-destructive">
