@@ -19,12 +19,19 @@ type Result =
 
 const INVENTORY = {
   totalDecks: 72,
-  holders: { one: 4, two: 8, three: 8 },
+  holders: {
+    // count = how many of this holder you own
+    // capacity = decks it carries
+    // footprint = on-ground size in feet (w × d)
+    one:   { count: 4, capacity: 1, footprint: "4 ft × 8 ft" },
+    two:   { count: 8, capacity: 2, footprint: "8 ft × 8 ft" },
+    three: { count: 8, capacity: 3, footprint: "12 ft × 8 ft" },
+  },
 };
 const HOLDER_CAPACITY =
-  INVENTORY.holders.one * 1 +
-  INVENTORY.holders.two * 2 +
-  INVENTORY.holders.three * 3;
+  INVENTORY.holders.one.count * INVENTORY.holders.one.capacity +
+  INVENTORY.holders.two.count * INVENTORY.holders.two.capacity +
+  INVENTORY.holders.three.count * INVENTORY.holders.three.capacity;
 
 /**
  * Greedy pack: fill the largest holders first so we use the fewest carts.
