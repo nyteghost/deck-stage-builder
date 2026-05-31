@@ -17,6 +17,31 @@ type Result =
   | { ok: true; decks: Deck[] }
   | { ok: false; reason: string };
 
+const INVENTORY = {
+  totalDecks: 72,
+  holders: { one: 4, two: 8, three: 8 },
+};
+const HOLDER_CAPACITY =
+  INVENTORY.holders.one * 1 +
+  INVENTORY.holders.two * 2 +
+  INVENTORY.holders.three * 3;
+
+/**
+ * Greedy pack: fill the largest holders first so we use the fewest carts.
+ * Returns null if the decks won't fit in the available holders.
+ */
+function packHolders(deckCount: number) {
+  let remaining = deckCount;
+  const three = Math.min(INVENTORY.holders.three, Math.floor(remaining / 3));
+  remaining -= three * 3;
+  const two = Math.min(INVENTORY.holders.two, Math.floor(remaining / 2));
+  remaining -= two * 2;
+  const one = Math.min(INVENTORY.holders.one, remaining);
+  remaining -= one;
+  if (remaining > 0) return null;
+  return { three, two, one };
+}
+
 /**
  * A 4'x8' deck covers two 4'x4' cells. Tiling a W×L stage with the minimum
  * number of decks is equivalent to tiling a (W/4)×(L/4) grid with 1×2
