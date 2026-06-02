@@ -59,29 +59,58 @@ const HOLDER_COLORS: Record<1 | 2 | 3, string> = {
  * the available holder counts, minimizing total holders used.
  * Returns null if impossible. Tries 3-deck first, then 2-deck, then 1-deck.
  */
+type StripItem =
+  | { kind: "holder"; size: 1 | 2 | 3 }
+  | { kind: "bridge" };
+
+/**
+ * Best way to cover a strip of K decks using holders (size 1/2/3) and
+ * "bridges" — single decks that span between two adjacent holders without
+ * needing their own holder. Minimizes holders used, then bridges, drawing
+ * from the shared inventory.
+ */
 function splitStrip(
   K: number,
   avail: { one: number; two: number; three: number },
-): { sizes: (1 | 2 | 3)[]; used: { one: number; two: number; three: number } } | null {
-  let best: { sizes: (1 | 2 | 3)[]; total: number; used: { one: number; two: number; three: number } } | null = null;
-  const maxThree = Math.min(avail.three, Math.floor(K / 3));
-  for (let c3 = maxThree; c3 >= 0; c3--) {
-    const rem1 = K - c3 * 3;
-    const maxTwo = Math.min(avail.two, Math.floor(rem1 / 2));
-    for (let c2 = maxTwo; c2 >= 0; c2--) {
-      const c1 = rem1 - c2 * 2;
-      if (c1 < 0 || c1 > avail.one) continue;
-      const total = c3 + c2 + c1;
-      if (!best || total < best.total) {
-        const sizes: (1 | 2 | 3)[] = [];
-        for (let i = 0; i < c3; i++) sizes.push(3);
-        for (let i = 0; i < c2; i++) sizes.push(2);
-        for (let i = 0; i < c1; i++) sizes.push(1);
-        best = { sizes, total, used: { one: c1, two: c2, three: c3 } };
+): { items: StripItem[]; used: { one: number; two: number; three: number }; bridges: number } | null {
+  let best: { c1: number; c2: number; c3: number; b: number; H: number } | null = null;
+  for (let c3 = 0; c3 <= Math.min(avail.three, Math.floor(K / 3)); c3++) {
+    for (let c2 = 0; c2 <= Math.min(avail.two, Math.floor((K - 3 * c3) / 2)); c2++) {
+      const maxC1 = Math.min(avail.one, K - 3 * c3 - 2 * c2);
+      for (let c1 = 0; c1 <= maxC1; c1++) {
+        const covered = 3 * c3 + 2 * c2 + c1;
+        const b = K - covered;
+        if (b < 0) continue;
+        const H = c1 + c2 + c3;
+        // bridges need 2 holders at their ends → at most H-1 bridges
+        if (b > 0 && H < 2) continue;
+        if (b > Math.max(0, H - 1)) continue;
+        if (!best || H < best.H || (H === best.H && b < best.b)) {
+          best = { c1, c2, c3, b, H };
+        }
       }
     }
   }
-  return best;
+  if (!best) return null;
+  // Build sequence: largest holders first, drop bridges between them.
+  const holders: (1 | 2 | 3)[] = [];
+  for (let i = 0; i < best.c3; i++) holders.push(3);
+  for (let i = 0; i < best.c2; i++) holders.push(2);
+  for (let i = 0; i < best.c1; i++) holders.push(1);
+  const items: StripItem[] = [];
+  let bridgesLeft = best.b;
+  for (let i = 0; i < holders.length; i++) {
+    items.push({ kind: "holder", size: holders[i] });
+    if (i < holders.length - 1 && bridgesLeft > 0) {
+      items.push({ kind: "bridge" });
+      bridgesLeft--;
+    }
+  }
+  return {
+    items,
+    used: { one: best.c1, two: best.c2, three: best.c3 },
+    bridges: best.b,
+  };
 }
 
 function planStage(widthFt: number, lengthFt: number): Result {
