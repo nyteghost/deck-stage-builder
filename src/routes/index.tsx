@@ -269,6 +269,7 @@ function Index() {
           <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck (4&#39;×8&#39;) + 8×2-deck (8&#39;×8&#39;) + 8×3-deck (12&#39;×8&#39;) holders.
+            A <span className="font-medium" style={{ color: BRIDGE_COLOR }}>bridge</span> is a single deck spanning between two holders — adds coverage without using another holder.
           </p>
         </header>
 
