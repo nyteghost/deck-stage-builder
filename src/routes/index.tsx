@@ -173,18 +173,22 @@ function planStage(widthFt: number, lengthFt: number): Result {
     three: INVENTORY.holders.three.count,
   };
   const holders: Holder[] = [];
+  const bridges: Bridge[] = [];
   let holderError: string | undefined;
   let label = 1;
+  let bridgeLabel = 1;
 
   // Sort strips by length desc so we allocate big holders to longer strips first.
   const order = strips.map((_, i) => i).sort((p, q) => strips[q].decks.length - strips[p].decks.length);
   const stripHolders: Holder[][] = strips.map(() => []);
+  // Per-strip pending bridges: index in stripHolders[idx] AFTER which the bridge sits.
+  const stripBridges: { afterHolderIdx: number; deck: Deck }[][] = strips.map(() => []);
 
   for (const idx of order) {
     const s = strips[idx];
     const split = splitStrip(s.decks.length, avail);
     if (!split) {
-      holderError = `Not enough holders left for a strip of ${s.decks.length} decks. Inventory cap is ${HOLDER_CAPACITY} decks (4×1 + 8×2 + 8×3).`;
+      holderError = `Not enough holders left for a strip of ${s.decks.length} decks. Inventory cap with bridges is higher, but holder counts are 4×1 + 8×2 + 8×3.`;
       continue;
     }
     avail.one -= split.used.one;
@@ -192,26 +196,57 @@ function planStage(widthFt: number, lengthFt: number): Result {
     avail.three -= split.used.three;
 
     let cursor = 0;
-    for (const size of split.sizes) {
-      const first = s.decks[cursor];
-      const last = s.decks[cursor + size - 1];
-      const x = Math.min(first.x, last.x);
-      const y = Math.min(first.y, last.y);
-      const w = s.axis === "x" ? size * 4 : 8;
-      const h = s.axis === "y" ? size * 4 : 8;
-      stripHolders[idx].push({ x, y, w, h, capacity: size, label: "" });
-      cursor += size;
+    let lastHolderIdx = -1;
+    for (const item of split.items) {
+      if (item.kind === "holder") {
+        const size = item.size;
+        const first = s.decks[cursor];
+        const last = s.decks[cursor + size - 1];
+        const x = Math.min(first.x, last.x);
+        const y = Math.min(first.y, last.y);
+        const w = s.axis === "x" ? size * 4 : 8;
+        const h = s.axis === "y" ? size * 4 : 8;
+        stripHolders[idx].push({ x, y, w, h, capacity: size, label: "" });
+        lastHolderIdx = stripHolders[idx].length - 1;
+        cursor += size;
+      } else {
+        // bridge: a single 4×8 deck at the cursor position, no holder consumed
+        const deck = s.decks[cursor];
+        deck.isBridge = true;
+        stripBridges[idx].push({ afterHolderIdx: lastHolderIdx, deck });
+        cursor += 1;
+      }
     }
   }
 
   // Re-label holders in reading order (top-to-bottom, then left-to-right).
-  const flat = stripHolders.flat().sort((p, q) => (p.y - q.y) || (p.x - q.x));
-  flat.forEach((h) => {
+  // Keep a map from original holder reference → label so bridges can name their endpoints.
+  const allHolders = stripHolders.flat();
+  const sorted = [...allHolders].sort((p, q) => (p.y - q.y) || (p.x - q.x));
+  sorted.forEach((h) => {
     h.label = `H${label++}`;
-    holders.push(h);
+  });
+  // Preserve a deterministic order in the returned array.
+  sorted.forEach((h) => holders.push(h));
+
+  // Build bridges with their endpoint labels.
+  stripBridges.forEach((list, idx) => {
+    for (const { afterHolderIdx, deck } of list) {
+      const left = stripHolders[idx][afterHolderIdx];
+      const right = stripHolders[idx][afterHolderIdx + 1];
+      if (!left || !right) continue;
+      bridges.push({
+        x: deck.x,
+        y: deck.y,
+        w: deck.w,
+        h: deck.h,
+        label: `B${bridgeLabel++}`,
+        between: [left.label, right.label],
+      });
+    }
   });
 
-  return { ok: true, decks, holders, holderError };
+  return { ok: true, decks, holders, bridges, holderError };
 }
 
 function Index() {
