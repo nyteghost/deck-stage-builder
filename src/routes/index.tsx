@@ -86,7 +86,8 @@ function splitStrip(
         // bridges need 2 holders at their ends → at most H-1 bridges
         if (b > 0 && H < 2) continue;
         if (b > Math.max(0, H - 1)) continue;
-        if (!best || H < best.H || (H === best.H && b < best.b)) {
+        // Prefer: fewest holders, then MOST bridges (use bridges whenever possible).
+        if (!best || H < best.H || (H === best.H && b > best.b)) {
           best = { c1, c2, c3, b, H };
         }
       }
