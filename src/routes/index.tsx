@@ -53,6 +53,7 @@ const HOLDER_COLORS: Record<1 | 2 | 3, string> = {
   2: "rgba(16, 185, 129, 0.85)",   // green
   3: "rgba(234, 88, 12, 0.85)",    // orange
 };
+const BRIDGE_COLOR = "rgba(234, 179, 8, 0.95)"; // yellow
 
 /**
  * Best way to split a strip of K decks into pieces of size 1/2/3 using
