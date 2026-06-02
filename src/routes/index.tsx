@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Deck = { x: number; y: number; w: number; h: number };
+type Deck = { x: number; y: number; w: number; h: number; isBridge?: boolean };
 type Holder = {
   // x,y,w,h in feet on the stage
   x: number;
@@ -21,9 +21,18 @@ type Holder = {
   capacity: 1 | 2 | 3;
   label: string; // e.g. "H1"
 };
+type Bridge = {
+  // a single 4×8 deck spanning between two adjacent holders (no holder needed)
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string; // e.g. "B1"
+  between: [string, string]; // labels of the two holders it bridges
+};
 
 type Result =
-  | { ok: true; decks: Deck[]; holders: Holder[]; holderError?: string }
+  | { ok: true; decks: Deck[]; holders: Holder[]; bridges: Bridge[]; holderError?: string }
   | { ok: false; reason: string };
 
 const INVENTORY = {
