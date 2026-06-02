@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Deck = { x: number; y: number; w: number; h: number };
+type Deck = { x: number; y: number; w: number; h: number; isBridge?: boolean };
 type Holder = {
   // x,y,w,h in feet on the stage
   x: number;
@@ -21,9 +21,18 @@ type Holder = {
   capacity: 1 | 2 | 3;
   label: string; // e.g. "H1"
 };
+type Bridge = {
+  // a single 4×8 deck spanning between two adjacent holders (no holder needed)
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string; // e.g. "B1"
+  between: [string, string]; // labels of the two holders it bridges
+};
 
 type Result =
-  | { ok: true; decks: Deck[]; holders: Holder[]; holderError?: string }
+  | { ok: true; decks: Deck[]; holders: Holder[]; bridges: Bridge[]; holderError?: string }
   | { ok: false; reason: string };
 
 const INVENTORY = {
@@ -44,35 +53,65 @@ const HOLDER_COLORS: Record<1 | 2 | 3, string> = {
   2: "rgba(16, 185, 129, 0.85)",   // green
   3: "rgba(234, 88, 12, 0.85)",    // orange
 };
+const BRIDGE_COLOR = "rgba(234, 179, 8, 0.95)"; // yellow
 
 /**
  * Best way to split a strip of K decks into pieces of size 1/2/3 using
  * the available holder counts, minimizing total holders used.
  * Returns null if impossible. Tries 3-deck first, then 2-deck, then 1-deck.
  */
+type StripItem =
+  | { kind: "holder"; size: 1 | 2 | 3 }
+  | { kind: "bridge" };
+
+/**
+ * Best way to cover a strip of K decks using holders (size 1/2/3) and
+ * "bridges" — single decks that span between two adjacent holders without
+ * needing their own holder. Minimizes holders used, then bridges, drawing
+ * from the shared inventory.
+ */
 function splitStrip(
   K: number,
   avail: { one: number; two: number; three: number },
-): { sizes: (1 | 2 | 3)[]; used: { one: number; two: number; three: number } } | null {
-  let best: { sizes: (1 | 2 | 3)[]; total: number; used: { one: number; two: number; three: number } } | null = null;
-  const maxThree = Math.min(avail.three, Math.floor(K / 3));
-  for (let c3 = maxThree; c3 >= 0; c3--) {
-    const rem1 = K - c3 * 3;
-    const maxTwo = Math.min(avail.two, Math.floor(rem1 / 2));
-    for (let c2 = maxTwo; c2 >= 0; c2--) {
-      const c1 = rem1 - c2 * 2;
-      if (c1 < 0 || c1 > avail.one) continue;
-      const total = c3 + c2 + c1;
-      if (!best || total < best.total) {
-        const sizes: (1 | 2 | 3)[] = [];
-        for (let i = 0; i < c3; i++) sizes.push(3);
-        for (let i = 0; i < c2; i++) sizes.push(2);
-        for (let i = 0; i < c1; i++) sizes.push(1);
-        best = { sizes, total, used: { one: c1, two: c2, three: c3 } };
+): { items: StripItem[]; used: { one: number; two: number; three: number }; bridges: number } | null {
+  let best: { c1: number; c2: number; c3: number; b: number; H: number } | null = null;
+  for (let c3 = 0; c3 <= Math.min(avail.three, Math.floor(K / 3)); c3++) {
+    for (let c2 = 0; c2 <= Math.min(avail.two, Math.floor((K - 3 * c3) / 2)); c2++) {
+      const maxC1 = Math.min(avail.one, K - 3 * c3 - 2 * c2);
+      for (let c1 = 0; c1 <= maxC1; c1++) {
+        const covered = 3 * c3 + 2 * c2 + c1;
+        const b = K - covered;
+        if (b < 0) continue;
+        const H = c1 + c2 + c3;
+        // bridges need 2 holders at their ends → at most H-1 bridges
+        if (b > 0 && H < 2) continue;
+        if (b > Math.max(0, H - 1)) continue;
+        if (!best || H < best.H || (H === best.H && b < best.b)) {
+          best = { c1, c2, c3, b, H };
+        }
       }
     }
   }
-  return best;
+  if (!best) return null;
+  // Build sequence: largest holders first, drop bridges between them.
+  const holders: (1 | 2 | 3)[] = [];
+  for (let i = 0; i < best.c3; i++) holders.push(3);
+  for (let i = 0; i < best.c2; i++) holders.push(2);
+  for (let i = 0; i < best.c1; i++) holders.push(1);
+  const items: StripItem[] = [];
+  let bridgesLeft = best.b;
+  for (let i = 0; i < holders.length; i++) {
+    items.push({ kind: "holder", size: holders[i] });
+    if (i < holders.length - 1 && bridgesLeft > 0) {
+      items.push({ kind: "bridge" });
+      bridgesLeft--;
+    }
+  }
+  return {
+    items,
+    used: { one: best.c1, two: best.c2, three: best.c3 },
+    bridges: best.b,
+  };
 }
 
 function planStage(widthFt: number, lengthFt: number): Result {
@@ -135,18 +174,22 @@ function planStage(widthFt: number, lengthFt: number): Result {
     three: INVENTORY.holders.three.count,
   };
   const holders: Holder[] = [];
+  const bridges: Bridge[] = [];
   let holderError: string | undefined;
   let label = 1;
+  let bridgeLabel = 1;
 
   // Sort strips by length desc so we allocate big holders to longer strips first.
   const order = strips.map((_, i) => i).sort((p, q) => strips[q].decks.length - strips[p].decks.length);
   const stripHolders: Holder[][] = strips.map(() => []);
+  // Per-strip pending bridges: index in stripHolders[idx] AFTER which the bridge sits.
+  const stripBridges: { afterHolderIdx: number; deck: Deck }[][] = strips.map(() => []);
 
   for (const idx of order) {
     const s = strips[idx];
     const split = splitStrip(s.decks.length, avail);
     if (!split) {
-      holderError = `Not enough holders left for a strip of ${s.decks.length} decks. Inventory cap is ${HOLDER_CAPACITY} decks (4×1 + 8×2 + 8×3).`;
+      holderError = `Not enough holders left for a strip of ${s.decks.length} decks. Inventory cap with bridges is higher, but holder counts are 4×1 + 8×2 + 8×3.`;
       continue;
     }
     avail.one -= split.used.one;
@@ -154,26 +197,57 @@ function planStage(widthFt: number, lengthFt: number): Result {
     avail.three -= split.used.three;
 
     let cursor = 0;
-    for (const size of split.sizes) {
-      const first = s.decks[cursor];
-      const last = s.decks[cursor + size - 1];
-      const x = Math.min(first.x, last.x);
-      const y = Math.min(first.y, last.y);
-      const w = s.axis === "x" ? size * 4 : 8;
-      const h = s.axis === "y" ? size * 4 : 8;
-      stripHolders[idx].push({ x, y, w, h, capacity: size, label: "" });
-      cursor += size;
+    let lastHolderIdx = -1;
+    for (const item of split.items) {
+      if (item.kind === "holder") {
+        const size = item.size;
+        const first = s.decks[cursor];
+        const last = s.decks[cursor + size - 1];
+        const x = Math.min(first.x, last.x);
+        const y = Math.min(first.y, last.y);
+        const w = s.axis === "x" ? size * 4 : 8;
+        const h = s.axis === "y" ? size * 4 : 8;
+        stripHolders[idx].push({ x, y, w, h, capacity: size, label: "" });
+        lastHolderIdx = stripHolders[idx].length - 1;
+        cursor += size;
+      } else {
+        // bridge: a single 4×8 deck at the cursor position, no holder consumed
+        const deck = s.decks[cursor];
+        deck.isBridge = true;
+        stripBridges[idx].push({ afterHolderIdx: lastHolderIdx, deck });
+        cursor += 1;
+      }
     }
   }
 
   // Re-label holders in reading order (top-to-bottom, then left-to-right).
-  const flat = stripHolders.flat().sort((p, q) => (p.y - q.y) || (p.x - q.x));
-  flat.forEach((h) => {
+  // Keep a map from original holder reference → label so bridges can name their endpoints.
+  const allHolders = stripHolders.flat();
+  const sorted = [...allHolders].sort((p, q) => (p.y - q.y) || (p.x - q.x));
+  sorted.forEach((h) => {
     h.label = `H${label++}`;
-    holders.push(h);
+  });
+  // Preserve a deterministic order in the returned array.
+  sorted.forEach((h) => holders.push(h));
+
+  // Build bridges with their endpoint labels.
+  stripBridges.forEach((list, idx) => {
+    for (const { afterHolderIdx, deck } of list) {
+      const left = stripHolders[idx][afterHolderIdx];
+      const right = stripHolders[idx][afterHolderIdx + 1];
+      if (!left || !right) continue;
+      bridges.push({
+        x: deck.x,
+        y: deck.y,
+        w: deck.w,
+        h: deck.h,
+        label: `B${bridgeLabel++}`,
+        between: [left.label, right.label],
+      });
+    }
   });
 
-  return { ok: true, decks, holders, holderError };
+  return { ok: true, decks, holders, bridges, holderError };
 }
 
 function Index() {
@@ -195,6 +269,7 @@ function Index() {
           <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck (4&#39;×8&#39;) + 8×2-deck (8&#39;×8&#39;) + 8×3-deck (12&#39;×8&#39;) holders.
+            A <span className="font-medium" style={{ color: BRIDGE_COLOR }}>bridge</span> is a single deck spanning between two holders — adds coverage without using another holder.
           </p>
         </header>
 
@@ -257,9 +332,10 @@ function Index() {
                           </span>
                         </div>
                         <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                          <div>{totals.three}× 3-deck (12&#39;×8&#39;)</div>
-                          <div>{totals.two}× 2-deck (8&#39;×8&#39;)</div>
-                          <div>{totals.one}× 1-deck (4&#39;×8&#39;)</div>
+                          <div>{totals.three}× 3-deck holder (12&#39;×8&#39;)</div>
+                          <div>{totals.two}× 2-deck holder (8&#39;×8&#39;)</div>
+                          <div>{totals.one}× 1-deck holder (4&#39;×8&#39;)</div>
+                          <div>{result.bridges.length}× bridge deck (4&#39;×8&#39;)</div>
                         </div>
                         {result.holderError && (
                           <div className="mt-1 text-xs font-medium text-destructive">
@@ -294,6 +370,13 @@ function Index() {
                         <span>{c}-deck holder ({c * 4}&#39;×8&#39;)</span>
                       </div>
                     ))}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-3 w-3 rounded-sm"
+                        style={{ background: BRIDGE_COLOR }}
+                      />
+                      <span>Bridge deck (4&#39;×8&#39;)</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -315,16 +398,19 @@ function Index() {
                       {result.decks.map((d, i) => (
                         <div
                           key={i}
-                          className="absolute flex items-center justify-center border border-background/60 bg-primary/70 text-[10px] font-medium text-primary-foreground"
+                          className={`absolute flex items-center justify-center border border-background/60 text-[10px] font-medium ${
+                            d.isBridge ? "text-black" : "bg-primary/70 text-primary-foreground"
+                          }`}
                           style={{
                             left: d.x * scale,
                             top: d.y * scale,
                             width: d.w * scale,
                             height: d.h * scale,
+                            ...(d.isBridge ? { background: BRIDGE_COLOR } : {}),
                           }}
-                          title={`${d.w}ft × ${d.h}ft deck`}
+                          title={d.isBridge ? "Bridge deck (no holder)" : `${d.w}ft × ${d.h}ft deck`}
                         >
-                          {d.w}×{d.h}
+                          {d.isBridge ? "BRIDGE" : `${d.w}×${d.h}`}
                         </div>
                       ))}
                       {result.holders.map((h, i) => (
@@ -397,6 +483,44 @@ function Index() {
                           <td className="py-2 pr-3">({h.x}, {h.y})</td>
                           <td className="py-2 pr-3">
                             x: {h.x}–{h.x + h.w}, y: {h.y}–{h.y + h.h}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {result.ok && result.bridges.length > 0 && (
+              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+                <div className="mb-3 text-sm font-semibold">Bridge placement</div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="text-muted-foreground">
+                      <tr className="border-b border-border">
+                        <th className="py-2 pr-3">Bridge</th>
+                        <th className="py-2 pr-3">Between</th>
+                        <th className="py-2 pr-3">Footprint</th>
+                        <th className="py-2 pr-3">Position (x, y) ft</th>
+                        <th className="py-2 pr-3">Spans (ft)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.bridges.map((br) => (
+                        <tr key={br.label} className="border-b border-border/60 last:border-0">
+                          <td className="py-2 pr-3 font-semibold">
+                            <span
+                              className="mr-2 inline-block h-2.5 w-2.5 rounded-sm align-middle"
+                              style={{ background: BRIDGE_COLOR }}
+                            />
+                            {br.label}
+                          </td>
+                          <td className="py-2 pr-3">{br.between[0]} ↔ {br.between[1]}</td>
+                          <td className="py-2 pr-3">{br.w}&#39; × {br.h}&#39;</td>
+                          <td className="py-2 pr-3">({br.x}, {br.y})</td>
+                          <td className="py-2 pr-3">
+                            x: {br.x}–{br.x + br.w}, y: {br.y}–{br.y + br.h}
                           </td>
                         </tr>
                       ))}
