@@ -398,15 +398,15 @@ function Index() {
                       {result.decks.map((d, i) => (
                         <div
                           key={i}
-                          className="absolute flex items-center justify-center border text-[10px] font-medium"
+                          className={`absolute flex items-center justify-center border border-background/60 text-[10px] font-medium ${
+                            d.isBridge ? "text-black" : "bg-primary/70 text-primary-foreground"
+                          }`}
                           style={{
                             left: d.x * scale,
                             top: d.y * scale,
                             width: d.w * scale,
                             height: d.h * scale,
-                            background: d.isBridge ? BRIDGE_COLOR : "hsl(var(--primary) / 0.7)",
-                            color: d.isBridge ? "#000" : "hsl(var(--primary-foreground))",
-                            borderColor: "hsl(var(--background) / 0.6)",
+                            ...(d.isBridge ? { background: BRIDGE_COLOR } : {}),
                           }}
                           title={d.isBridge ? "Bridge deck (no holder)" : `${d.w}ft × ${d.h}ft deck`}
                         >
