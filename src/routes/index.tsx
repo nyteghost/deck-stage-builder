@@ -370,6 +370,13 @@ function Index() {
                         <span>{c}-deck holder ({c * 4}&#39;×8&#39;)</span>
                       </div>
                     ))}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-3 w-3 rounded-sm"
+                        style={{ background: BRIDGE_COLOR }}
+                      />
+                      <span>Bridge deck (4&#39;×8&#39;)</span>
+                    </div>
                   </div>
                 </div>
               )}
