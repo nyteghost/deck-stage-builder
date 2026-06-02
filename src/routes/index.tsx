@@ -332,9 +332,10 @@ function Index() {
                           </span>
                         </div>
                         <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                          <div>{totals.three}× 3-deck (12&#39;×8&#39;)</div>
-                          <div>{totals.two}× 2-deck (8&#39;×8&#39;)</div>
-                          <div>{totals.one}× 1-deck (4&#39;×8&#39;)</div>
+                          <div>{totals.three}× 3-deck holder (12&#39;×8&#39;)</div>
+                          <div>{totals.two}× 2-deck holder (8&#39;×8&#39;)</div>
+                          <div>{totals.one}× 1-deck holder (4&#39;×8&#39;)</div>
+                          <div>{result.bridges.length}× bridge deck (4&#39;×8&#39;)</div>
                         </div>
                         {result.holderError && (
                           <div className="mt-1 text-xs font-medium text-destructive">
