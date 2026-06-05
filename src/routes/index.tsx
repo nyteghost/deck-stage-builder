@@ -266,14 +266,15 @@ function planStage(widthFt: number, lengthFt: number): Result {
   if (attempts.length === 0) {
     return { ok: false, reason: "Could not build this stage with available holders." };
   }
-  // Prefer: no holder error, then fewer holders, then more bridges.
+  // Prefer: no holder error, then MOST bridges, then fewest holders.
   attempts.sort((p, q) => {
     const pe = p.holderError ? 1 : 0;
     const qe = q.holderError ? 1 : 0;
     if (pe !== qe) return pe - qe;
-    if (p.totalHolders !== q.totalHolders) return p.totalHolders - q.totalHolders;
-    return q.totalBridges - p.totalBridges;
+    if (p.totalBridges !== q.totalBridges) return q.totalBridges - p.totalBridges;
+    return p.totalHolders - q.totalHolders;
   });
+
   const best = attempts[0];
   return {
     ok: true,
