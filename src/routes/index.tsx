@@ -86,10 +86,11 @@ function splitStrip(
         // bridges need 2 holders at their ends → at most H-1 bridges
         if (b > 0 && H < 2) continue;
         if (b > Math.max(0, H - 1)) continue;
-        // Prefer: fewest holders, then MOST bridges (use bridges whenever possible).
-        if (!best || H < best.H || (H === best.H && b > best.b)) {
+        // Prefer: MOST bridges, then fewest holders (soft tiebreaker).
+        if (!best || b > best.b || (b === best.b && H < best.H)) {
           best = { c1, c2, c3, b, H };
         }
+
       }
     }
   }
@@ -265,14 +266,15 @@ function planStage(widthFt: number, lengthFt: number): Result {
   if (attempts.length === 0) {
     return { ok: false, reason: "Could not build this stage with available holders." };
   }
-  // Prefer: no holder error, then fewer holders, then more bridges.
+  // Prefer: no holder error, then MOST bridges, then fewest holders.
   attempts.sort((p, q) => {
     const pe = p.holderError ? 1 : 0;
     const qe = q.holderError ? 1 : 0;
     if (pe !== qe) return pe - qe;
-    if (p.totalHolders !== q.totalHolders) return p.totalHolders - q.totalHolders;
-    return q.totalBridges - p.totalBridges;
+    if (p.totalBridges !== q.totalBridges) return q.totalBridges - p.totalBridges;
+    return p.totalHolders - q.totalHolders;
   });
+
   const best = attempts[0];
   return {
     ok: true,
