@@ -86,10 +86,16 @@ function splitStrip(
         // bridges need 2 holders at their ends → at most H-1 bridges
         if (b > 0 && H < 2) continue;
         if (b > Math.max(0, H - 1)) continue;
-        // Prefer: MOST bridges, then fewest holders (soft tiebreaker).
-        if (!best || b > best.b || (b === best.b && H < best.H)) {
+        // Prefer: MOST bridges, then FEWEST 1-deck holders, then fewest total holders.
+        if (
+          !best ||
+          b > best.b ||
+          (b === best.b && c1 < best.c1) ||
+          (b === best.b && c1 === best.c1 && H < best.H)
+        ) {
           best = { c1, c2, c3, b, H };
         }
+
 
       }
     }
