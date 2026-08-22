@@ -1,38 +1,33 @@
-## Goal
+# Add stage height and a side (elevation) view
 
-Make "use as many bridges as possible" the primary objective of the planner, instead of being a tiebreaker behind "fewest holders."
+Yes — with a height input the planner can show a second drawing: the stage seen from the side, next to the existing top-down view.
 
-## Changes in `src/routes/index.tsx`
+## What you'll get
 
-### 1. `splitStrip()` — flip the objective
-Current scoring inside the c3/c2/c1 search:
-```
-prefer fewest holders, then most bridges
-```
-Change to:
-```
-prefer MOST bridges, then fewest holders (as a soft tiebreaker only)
-```
-Inventory is still respected (`c1 ≤ avail.one`, etc.) and the structural constraint `b ≤ H - 1` stays, so bridges always have two holder endpoints.
+1. **New "Stage height (in)" input** in the settings panel, alongside width and length.
+2. **Two views, both on screen:**
+   - **Top view** (existing): decks, holders coloured by capacity, bridges in yellow, labels.
+   - **Side view** (new): the stage seen from the front edge — deck surface as a slab at the given height, legs/supports drawn down to the floor, floor line, and a height dimension marker.
+3. **View toggle**: Top / Side / Both (defaults to Both), so the side view can be seen large on its own.
+4. **Info stays on the views:**
+   - Top view keeps holder labels (H1, H2…) and bridge labels (B1…).
+   - Side view labels each column across the stage with the holder or bridge it belongs to (matching the same colours), so the two drawings read together.
+   - Side view annotates deck thickness, leg height, and total surface height, plus overall span in feet.
+5. **Summary panel** gains: stage height, total surface height (height + deck thickness), and leg count.
 
-Effect per strip: the splitter will pick the combo of 1/2/3-deck holders that leaves the most single-deck gaps to bridge, e.g. for a 6-deck strip it will choose 3-deck + bridge + 2-deck (1 bridge) over 3-deck + 3-deck (0 bridges).
+## Side view details
 
-### 2. `planStage()` orientation chooser — flip the objective
-Currently sorts the two orientation attempts by:
-```
-fewest holders, then most bridges
-```
-Change to:
-```
-most bridges, then fewest holders
-```
-Holder-error attempts still get pushed last. This lets a 24×24 (or any stage where both orientations are valid) pick the orientation that yields more bridge slots.
+- Which cross-section: the side view is taken along the stage width (looking at the front edge), showing every 4 ft column across that edge and which holder/bridge sits there.
+- Legs are drawn at each holder's outer edges; bridge sections are drawn with no leg beneath them, which visually shows the unsupported span.
+- Common stage heights (16", 24", 32", 40", 48") offered as quick-pick buttons; any height can still be typed.
 
-### 3. Leave intact
-- Inventory caps (4 × 1-deck, 8 × 2-deck, 8 × 3-deck).
-- The `b ≤ H - 1` rule (each bridge needs a holder on each side).
-- All UI, tables, legend, deck-count display.
+## Technical notes
 
-## Trade-off the user should know about
+- All work stays in `src/routes/index.tsx`.
+- `planStage` output is unchanged; a small derived helper maps holders/bridges to their span along the chosen cross-section axis for the elevation drawing.
+- Side view is rendered with the same absolutely-positioned `div` approach and the same `scale` (ft → px), with a separate vertical scale for inches so short heights stay visible.
+- Colours reuse the existing `HOLDER_COLORS` / `BRIDGE_COLOR` tokens.
 
-Maximizing bridges will sometimes use *more* holders than the previous strategy (e.g. a 4-deck strip currently solves as one 3-deck + one 1-deck holder with 0 bridges; the new strategy may prefer 2-deck + bridge + 1-deck = 2 holders + 1 bridge, vs. previously 2 holders + 0 bridges — same holder count here, but in other strip lengths the bridge-max solution can cost an extra holder). Inventory limits still apply, so if a holder type runs out the planner falls back to whatever combination fits.
+## Open assumption
+
+Deck thickness is assumed to be a fixed 4 in (typical stage deck panel). Say the word if yours differs and I'll make it an input.
