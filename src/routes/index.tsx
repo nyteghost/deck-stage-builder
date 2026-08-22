@@ -60,7 +60,10 @@ const HOLDER_COLORS: Record<1 | 2 | 3, string> = {
 };
 const BRIDGE_COLOR = "rgba(234, 179, 8, 0.95)"; // yellow
 const DECK_THICKNESS_IN = 4; // typical stage deck panel thickness
-const HEIGHT_PRESETS = [16, 24, 32, 40, 48];
+const MIN_HEIGHT_IN = 32;
+const MAX_HEIGHT_IN = 44;
+const HEIGHT_PRESETS = [32, 36, 40, 44];
+
 
 type ElevationSegment = {
   label: string;
@@ -313,7 +316,9 @@ function planStage(widthFt: number, lengthFt: number): Result {
 function Index() {
   const [width, setWidth] = useState(24);
   const [length, setLength] = useState(16);
-  const [heightIn, setHeightIn] = useState(24);
+  const [heightIn, setHeightIn] = useState(MIN_HEIGHT_IN);
+  const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
+
   const [view, setView] = useState<"top" | "side" | "both">("both");
 
   const result = useMemo(() => planStage(width, length), [width, length]);
@@ -389,21 +394,45 @@ function Index() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium">Stage height (in)</label>
+                <label className="block text-sm font-medium">
+                  Stage height (in){" "}
+                  <span className="font-normal text-muted-foreground">— {MIN_HEIGHT_IN}&quot;–{MAX_HEIGHT_IN}&quot;</span>
+                </label>
                 <input
                   type="number"
-                  min={0}
+                  min={MIN_HEIGHT_IN}
+                  max={MAX_HEIGHT_IN}
                   step={1}
-                  value={heightIn}
-                  onChange={(e) => setHeightIn(Math.max(0, Number(e.target.value)))}
+                  value={heightText}
+                  onChange={(e) => {
+                    const t = e.target.value;
+                    setHeightText(t);
+                    const n = Number(t);
+                    if (t !== "" && Number.isFinite(n) && n >= MIN_HEIGHT_IN && n <= MAX_HEIGHT_IN) {
+                      setHeightIn(n);
+                    }
+                  }}
+                  onBlur={() => {
+                    const n = Number(heightText);
+                    const clamped = !Number.isFinite(n)
+                      ? heightIn
+                      : Math.min(MAX_HEIGHT_IN, Math.max(MIN_HEIGHT_IN, Math.round(n)));
+                    setHeightIn(clamped);
+                    setHeightText(String(clamped));
+                  }}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
+
                 <div className="mt-2 flex flex-wrap gap-1">
                   {HEIGHT_PRESETS.map((h) => (
                     <button
                       key={h}
                       type="button"
-                      onClick={() => setHeightIn(h)}
+                      onClick={() => {
+                        setHeightIn(h);
+                        setHeightText(String(h));
+                      }}
+
                       className={`rounded-md border px-2 py-1 text-xs transition-colors ${
                         heightIn === h
                           ? "border-primary bg-primary text-primary-foreground"
