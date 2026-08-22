@@ -531,12 +531,15 @@ function Index() {
           </div>
 
           <div className="space-y-6">
+            {(!result.ok || showTop) && (
             <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
               {result.ok ? (
                 <>
+                  <div className="mb-1 text-sm font-semibold">Top view (plan)</div>
                   <div className="mb-3 text-xs text-muted-foreground">
                     Each thin rectangle is one 4&#39;×8&#39; deck. Coloured outlines show holders.
                   </div>
+
                   <div className="overflow-auto">
                     <div
                       className="relative border border-border bg-muted/40"
