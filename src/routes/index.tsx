@@ -86,18 +86,20 @@ function splitStrip(
         // bridges need 2 holders at their ends → at most H-1 bridges
         if (b > 0 && H < 2) continue;
         if (b > Math.max(0, H - 1)) continue;
-        // Prefer: MOST bridges, then FEWEST 1-deck holders, then fewest total holders.
+        // Score: bridges are valuable, single-deck holders are heavily penalized.
+        // Tie-break on fewest total holders.
+        const score = b * 2 - c1 * 5;
+        const bestScore = best ? best.b * 2 - best.c1 * 5 : -Infinity;
         if (
           !best ||
-          b > best.b ||
-          (b === best.b && c1 < best.c1) ||
-          (b === best.b && c1 === best.c1 && H < best.H)
+          score > bestScore ||
+          (score === bestScore && b > best.b) ||
+          (score === bestScore && b === best.b && H < best.H)
         ) {
           best = { c1, c2, c3, b, H };
         }
-
-
       }
+
     }
   }
   if (!best) return null;
