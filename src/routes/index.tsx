@@ -54,6 +54,17 @@ const HOLDER_COLORS: Record<1 | 2 | 3, string> = {
   3: "rgba(234, 88, 12, 0.85)",    // orange
 };
 const BRIDGE_COLOR = "rgba(234, 179, 8, 0.95)"; // yellow
+const DECK_THICKNESS_IN = 4; // typical stage deck panel thickness
+const HEIGHT_PRESETS = [16, 24, 32, 40, 48];
+
+type ElevationSegment = {
+  label: string;
+  x: number;
+  w: number;
+  kind: "holder" | "bridge";
+  capacity?: 1 | 2 | 3;
+};
+
 
 /**
  * Best way to split a strip of K decks into pieces of size 1/2/3 using
