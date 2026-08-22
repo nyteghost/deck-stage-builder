@@ -60,7 +60,10 @@ const HOLDER_COLORS: Record<1 | 2 | 3, string> = {
 };
 const BRIDGE_COLOR = "rgba(234, 179, 8, 0.95)"; // yellow
 const DECK_THICKNESS_IN = 4; // typical stage deck panel thickness
-const HEIGHT_PRESETS = [16, 24, 32, 40, 48];
+const MIN_HEIGHT_IN = 32;
+const MAX_HEIGHT_IN = 44;
+const HEIGHT_PRESETS = [32, 36, 40, 44];
+
 
 type ElevationSegment = {
   label: string;
