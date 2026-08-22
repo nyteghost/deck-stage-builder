@@ -41,6 +41,22 @@ npm run preview
 `build` outputs the production bundle; `preview` serves it locally so you can
 check it before hosting.
 
+## Run with Docker (no Node needed)
+
+Requires only Docker Desktop / Docker Engine with Compose.
+
+```bash
+docker compose up            # dev server with hot reload -> http://localhost:8080
+docker compose up --build prod   # production build -> http://localhost:8080
+docker compose down          # stop
+```
+
+The dev service mounts the project directory, so edits on your machine reload in
+the browser. `node_modules` stays inside the container, so it never clashes with
+a local install. The `prod` service builds the site and serves the compiled
+bundle.
+
+
 ## Other scripts
 
 | Script              | What it does                        |
