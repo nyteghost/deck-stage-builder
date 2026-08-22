@@ -601,6 +601,112 @@ function Index() {
                 </div>
               )}
             </div>
+            )}
+
+            {result.ok && showSide && (
+              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+                <div className="mb-1 text-sm font-semibold">Side view (elevation)</div>
+                <div className="mb-3 text-xs text-muted-foreground">
+                  Looking at the front edge ({width} ft across). Deck surface sits {heightIn}&quot; off
+                  the floor; slab is {DECK_THICKNESS_IN}&quot; thick, so the walking surface is{" "}
+                  {surfaceTotalIn}&quot; total. Yellow sections are bridges — no leg beneath them.
+                </div>
+                <div className="overflow-auto pb-2">
+                  <div className="flex items-end gap-3">
+                    {/* height dimension marker */}
+                    <div
+                      className="relative shrink-0 text-[10px] text-muted-foreground"
+                      style={{ height: sideH, width: 44 }}
+                    >
+                      <div
+                        className="absolute right-0 border-r border-dashed border-border"
+                        style={{ top: 0, height: sideH }}
+                      />
+                      <div className="absolute right-1 top-0 whitespace-nowrap">
+                        {surfaceTotalIn}&quot;
+                      </div>
+                      <div
+                        className="absolute right-1 whitespace-nowrap"
+                        style={{ top: deckPx + legPx / 2 - 6 }}
+                      >
+                        {heightIn}&quot; legs
+                      </div>
+                    </div>
+
+                    <div className="relative" style={{ width: canvasW || 1, height: sideH }}>
+                      {/* deck slab */}
+                      <div
+                        className="absolute left-0 top-0 border border-border bg-muted/40"
+                        style={{ width: canvasW || 1, height: deckPx }}
+                      />
+                      {elevation.map((s) => {
+                        const color =
+                          s.kind === "bridge" ? BRIDGE_COLOR : HOLDER_COLORS[s.capacity ?? 1];
+                        return (
+                          <div key={`seg-${s.label}`}>
+                            <div
+                              className="absolute flex items-center justify-center text-[10px] font-bold text-white"
+                              style={{
+                                left: s.x * scale,
+                                top: 0,
+                                width: s.w * scale,
+                                height: deckPx,
+                                background: color,
+                                border: "1px solid rgba(0,0,0,0.25)",
+                                boxSizing: "border-box",
+                                color: s.kind === "bridge" ? "#000" : "#fff",
+                              }}
+                              title={
+                                s.kind === "bridge"
+                                  ? `${s.label}: bridge deck (unsupported span)`
+                                  : `${s.label}: ${s.capacity}-deck holder`
+                              }
+                            >
+                              {s.label}
+                            </div>
+                            {s.kind === "holder" && legPx > 0 && (
+                              <>
+                                <div
+                                  className="absolute"
+                                  style={{
+                                    left: s.x * scale,
+                                    top: deckPx,
+                                    width: 6,
+                                    height: legPx,
+                                    background: color,
+                                  }}
+                                />
+                                <div
+                                  className="absolute"
+                                  style={{
+                                    left: (s.x + s.w) * scale - 6,
+                                    top: deckPx,
+                                    width: 6,
+                                    height: legPx,
+                                    background: color,
+                                  }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {/* floor line */}
+                      <div
+                        className="absolute left-0 border-t-2 border-foreground/60"
+                        style={{ top: sideH, width: canvasW || 1 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Horizontal scale: 1 ft ≈ {scale.toFixed(1)} px. Vertical scale: 1 in ≈{" "}
+                  {vScale.toFixed(1)} px (exaggerated for readability). Labels match the top view.
+                </p>
+              </div>
+            )}
+
+
 
             {result.ok && result.holders.length > 0 && (
               <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
