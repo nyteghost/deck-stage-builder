@@ -4,10 +4,15 @@ import { useMemo, useState } from "react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stage Deck Planner" },
-      { name: "description", content: "Plan a stage layout from 4×8 ft decks." },
+      { title: "Stage Deck Planner — Top & Side Views" },
+      { name: "description", content: "Plan a stage from 4×8 ft decks: holders, bridges, plan view and side elevation with height." },
+      { property: "og:title", content: "Stage Deck Planner — Top & Side Views" },
+      { property: "og:description", content: "Plan a stage from 4×8 ft decks with holder placement, bridges and a side elevation." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
+
   component: Index,
 });
 
