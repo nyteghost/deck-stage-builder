@@ -389,15 +389,35 @@ function Index() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium">Stage height (in)</label>
+                <label className="block text-sm font-medium">
+                  Stage height (in){" "}
+                  <span className="font-normal text-muted-foreground">— {MIN_HEIGHT_IN}&quot;–{MAX_HEIGHT_IN}&quot;</span>
+                </label>
                 <input
                   type="number"
-                  min={0}
+                  min={MIN_HEIGHT_IN}
+                  max={MAX_HEIGHT_IN}
                   step={1}
-                  value={heightIn}
-                  onChange={(e) => setHeightIn(Math.max(0, Number(e.target.value)))}
+                  value={heightText}
+                  onChange={(e) => {
+                    const t = e.target.value;
+                    setHeightText(t);
+                    const n = Number(t);
+                    if (t !== "" && Number.isFinite(n) && n >= MIN_HEIGHT_IN && n <= MAX_HEIGHT_IN) {
+                      setHeightIn(n);
+                    }
+                  }}
+                  onBlur={() => {
+                    const n = Number(heightText);
+                    const clamped = !Number.isFinite(n)
+                      ? heightIn
+                      : Math.min(MAX_HEIGHT_IN, Math.max(MIN_HEIGHT_IN, Math.round(n)));
+                    setHeightIn(clamped);
+                    setHeightText(String(clamped));
+                  }}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
+
                 <div className="mt-2 flex flex-wrap gap-1">
                   {HEIGHT_PRESETS.map((h) => (
                     <button
