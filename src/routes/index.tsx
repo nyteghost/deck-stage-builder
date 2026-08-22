@@ -428,7 +428,11 @@ function Index() {
                     <button
                       key={h}
                       type="button"
-                      onClick={() => setHeightIn(h)}
+                      onClick={() => {
+                        setHeightIn(h);
+                        setHeightText(String(h));
+                      }}
+
                       className={`rounded-md border px-2 py-1 text-xs transition-colors ${
                         heightIn === h
                           ? "border-primary bg-primary text-primary-foreground"
