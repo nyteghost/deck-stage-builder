@@ -383,11 +383,74 @@ function Index() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium">Stage height (in)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={heightIn}
+                  onChange={(e) => setHeightIn(Math.max(0, Number(e.target.value)))}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {HEIGHT_PRESETS.map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => setHeightIn(h)}
+                      className={`rounded-md border px-2 py-1 text-xs transition-colors ${
+                        heightIn === h
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {h}&quot;
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">View</label>
+                <div className="mt-1 flex gap-1">
+                  {(["top", "side", "both"] as const).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setView(v)}
+                      className={`flex-1 rounded-md border px-2 py-1.5 text-xs capitalize transition-colors ${
+                        view === v
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="rounded-md bg-muted p-3 text-sm">
                 <div className="flex justify-between py-0.5">
                   <span className="text-muted-foreground">Stage area</span>
                   <span className="font-medium">{totalArea} sq ft</span>
                 </div>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-muted-foreground">Stage height</span>
+                  <span className="font-medium">{heightIn}&quot;</span>
+                </div>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-muted-foreground">Surface height</span>
+                  <span className="font-medium">{surfaceTotalIn}&quot; (incl. {DECK_THICKNESS_IN}&quot; deck)</span>
+                </div>
+                {result.ok && (
+                  <div className="flex justify-between py-0.5">
+                    <span className="text-muted-foreground">Legs (front row)</span>
+                    <span className="font-medium">{legCount}</span>
+                  </div>
+                )}
+
                 {result.ok ? (
                   (() => {
                     const count = result.decks.length;
