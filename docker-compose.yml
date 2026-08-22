@@ -1,0 +1,26 @@
+services:
+  # Default: hot-reloading dev server -> http://localhost:8080
+  web:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+
+  # Production build: docker compose up prod -> http://localhost:8080
+  prod:
+    profiles: ["prod"]
+    build:
+      context: .
+      target: prod
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
