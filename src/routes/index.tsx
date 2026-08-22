@@ -316,7 +316,9 @@ function planStage(widthFt: number, lengthFt: number): Result {
 function Index() {
   const [width, setWidth] = useState(24);
   const [length, setLength] = useState(16);
-  const [heightIn, setHeightIn] = useState(24);
+  const [heightIn, setHeightIn] = useState(MIN_HEIGHT_IN);
+  const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
+
   const [view, setView] = useState<"top" | "side" | "both">("both");
 
   const result = useMemo(() => planStage(width, length), [width, length]);
