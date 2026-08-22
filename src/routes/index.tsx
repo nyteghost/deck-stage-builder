@@ -308,6 +308,8 @@ function planStage(widthFt: number, lengthFt: number): Result {
 function Index() {
   const [width, setWidth] = useState(24);
   const [length, setLength] = useState(16);
+  const [heightIn, setHeightIn] = useState(24);
+  const [view, setView] = useState<"top" | "side" | "both">("both");
 
   const result = useMemo(() => planStage(width, length), [width, length]);
   const totalArea = width * length;
@@ -316,6 +318,33 @@ function Index() {
   const scale = Math.min(maxPx / Math.max(width, 1), maxPx / Math.max(length, 1), 32);
   const canvasW = width * scale;
   const canvasH = length * scale;
+
+  // Cross-section along the stage width, taken at the front edge (y = 0).
+  const elevation = useMemo<ElevationSegment[]>(() => {
+    if (!result.ok) return [];
+    const segs: ElevationSegment[] = [];
+    for (const h of result.holders) {
+      if (h.y !== 0) continue;
+      segs.push({ label: h.label, x: h.x, w: h.w, kind: "holder", capacity: h.capacity });
+    }
+    for (const br of result.bridges) {
+      if (br.y !== 0) continue;
+      segs.push({ label: br.label, x: br.x, w: br.w, kind: "bridge" });
+    }
+    return segs.sort((p, q) => p.x - q.x);
+  }, [result]);
+
+  const legCount = elevation.filter((s) => s.kind === "holder").length * 2;
+  const surfaceTotalIn = heightIn + DECK_THICKNESS_IN;
+
+  // Vertical scale for the elevation: inches → px (kept readable for short heights).
+  const vScale = Math.min(Math.max(220 / Math.max(surfaceTotalIn, 1), 2), 8);
+  const deckPx = Math.max(DECK_THICKNESS_IN * vScale, 6);
+  const legPx = Math.max(heightIn * vScale, 0);
+  const sideH = deckPx + legPx;
+  const showTop = view === "top" || view === "both";
+  const showSide = view === "side" || view === "both";
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
