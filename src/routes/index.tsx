@@ -4,10 +4,15 @@ import { useMemo, useState } from "react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stage Deck Planner" },
-      { name: "description", content: "Plan a stage layout from 4×8 ft decks." },
+      { title: "Stage Deck Planner — Top & Side Views" },
+      { name: "description", content: "Plan a stage from 4×8 ft decks: holders, bridges, plan view and side elevation with height." },
+      { property: "og:title", content: "Stage Deck Planner — Top & Side Views" },
+      { property: "og:description", content: "Plan a stage from 4×8 ft decks with holder placement, bridges and a side elevation." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
+
   component: Index,
 });
 
@@ -54,6 +59,17 @@ const HOLDER_COLORS: Record<1 | 2 | 3, string> = {
   3: "rgba(234, 88, 12, 0.85)",    // orange
 };
 const BRIDGE_COLOR = "rgba(234, 179, 8, 0.95)"; // yellow
+const DECK_THICKNESS_IN = 4; // typical stage deck panel thickness
+const HEIGHT_PRESETS = [16, 24, 32, 40, 48];
+
+type ElevationSegment = {
+  label: string;
+  x: number;
+  w: number;
+  kind: "holder" | "bridge";
+  capacity?: 1 | 2 | 3;
+};
+
 
 /**
  * Best way to split a strip of K decks into pieces of size 1/2/3 using
@@ -297,6 +313,8 @@ function planStage(widthFt: number, lengthFt: number): Result {
 function Index() {
   const [width, setWidth] = useState(24);
   const [length, setLength] = useState(16);
+  const [heightIn, setHeightIn] = useState(24);
+  const [view, setView] = useState<"top" | "side" | "both">("both");
 
   const result = useMemo(() => planStage(width, length), [width, length]);
   const totalArea = width * length;
@@ -305,6 +323,33 @@ function Index() {
   const scale = Math.min(maxPx / Math.max(width, 1), maxPx / Math.max(length, 1), 32);
   const canvasW = width * scale;
   const canvasH = length * scale;
+
+  // Cross-section along the stage width, taken at the front edge (y = 0).
+  const elevation = useMemo<ElevationSegment[]>(() => {
+    if (!result.ok) return [];
+    const segs: ElevationSegment[] = [];
+    for (const h of result.holders) {
+      if (h.y !== 0) continue;
+      segs.push({ label: h.label, x: h.x, w: h.w, kind: "holder", capacity: h.capacity });
+    }
+    for (const br of result.bridges) {
+      if (br.y !== 0) continue;
+      segs.push({ label: br.label, x: br.x, w: br.w, kind: "bridge" });
+    }
+    return segs.sort((p, q) => p.x - q.x);
+  }, [result]);
+
+  const legCount = elevation.filter((s) => s.kind === "holder").length * 2;
+  const surfaceTotalIn = heightIn + DECK_THICKNESS_IN;
+
+  // Vertical scale for the elevation: inches → px (kept readable for short heights).
+  const vScale = Math.min(Math.max(220 / Math.max(surfaceTotalIn, 1), 2), 8);
+  const deckPx = Math.max(DECK_THICKNESS_IN * vScale, 6);
+  const legPx = Math.max(heightIn * vScale, 0);
+  const sideH = deckPx + legPx;
+  const showTop = view === "top" || view === "both";
+  const showSide = view === "side" || view === "both";
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -343,11 +388,74 @@ function Index() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium">Stage height (in)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={heightIn}
+                  onChange={(e) => setHeightIn(Math.max(0, Number(e.target.value)))}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {HEIGHT_PRESETS.map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => setHeightIn(h)}
+                      className={`rounded-md border px-2 py-1 text-xs transition-colors ${
+                        heightIn === h
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {h}&quot;
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">View</label>
+                <div className="mt-1 flex gap-1">
+                  {(["top", "side", "both"] as const).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setView(v)}
+                      className={`flex-1 rounded-md border px-2 py-1.5 text-xs capitalize transition-colors ${
+                        view === v
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="rounded-md bg-muted p-3 text-sm">
                 <div className="flex justify-between py-0.5">
                   <span className="text-muted-foreground">Stage area</span>
                   <span className="font-medium">{totalArea} sq ft</span>
                 </div>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-muted-foreground">Stage height</span>
+                  <span className="font-medium">{heightIn}&quot;</span>
+                </div>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-muted-foreground">Surface height</span>
+                  <span className="font-medium">{surfaceTotalIn}&quot; (incl. {DECK_THICKNESS_IN}&quot; deck)</span>
+                </div>
+                {result.ok && (
+                  <div className="flex justify-between py-0.5">
+                    <span className="text-muted-foreground">Legs (front row)</span>
+                    <span className="font-medium">{legCount}</span>
+                  </div>
+                )}
+
                 {result.ok ? (
                   (() => {
                     const count = result.decks.length;
@@ -428,12 +536,15 @@ function Index() {
           </div>
 
           <div className="space-y-6">
+            {(!result.ok || showTop) && (
             <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
               {result.ok ? (
                 <>
+                  <div className="mb-1 text-sm font-semibold">Top view (plan)</div>
                   <div className="mb-3 text-xs text-muted-foreground">
                     Each thin rectangle is one 4&#39;×8&#39; deck. Coloured outlines show holders.
                   </div>
+
                   <div className="overflow-auto">
                     <div
                       className="relative border border-border bg-muted/40"
@@ -495,6 +606,112 @@ function Index() {
                 </div>
               )}
             </div>
+            )}
+
+            {result.ok && showSide && (
+              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+                <div className="mb-1 text-sm font-semibold">Side view (elevation)</div>
+                <div className="mb-3 text-xs text-muted-foreground">
+                  Looking at the front edge ({width} ft across). Deck surface sits {heightIn}&quot; off
+                  the floor; slab is {DECK_THICKNESS_IN}&quot; thick, so the walking surface is{" "}
+                  {surfaceTotalIn}&quot; total. Yellow sections are bridges — no leg beneath them.
+                </div>
+                <div className="overflow-auto pb-2">
+                  <div className="flex items-end gap-3">
+                    {/* height dimension marker */}
+                    <div
+                      className="relative shrink-0 text-[10px] text-muted-foreground"
+                      style={{ height: sideH, width: 44 }}
+                    >
+                      <div
+                        className="absolute right-0 border-r border-dashed border-border"
+                        style={{ top: 0, height: sideH }}
+                      />
+                      <div className="absolute right-1 top-0 whitespace-nowrap">
+                        {surfaceTotalIn}&quot;
+                      </div>
+                      <div
+                        className="absolute right-1 whitespace-nowrap"
+                        style={{ top: deckPx + legPx / 2 - 6 }}
+                      >
+                        {heightIn}&quot; legs
+                      </div>
+                    </div>
+
+                    <div className="relative" style={{ width: canvasW || 1, height: sideH }}>
+                      {/* deck slab */}
+                      <div
+                        className="absolute left-0 top-0 border border-border bg-muted/40"
+                        style={{ width: canvasW || 1, height: deckPx }}
+                      />
+                      {elevation.map((s) => {
+                        const color =
+                          s.kind === "bridge" ? BRIDGE_COLOR : HOLDER_COLORS[s.capacity ?? 1];
+                        return (
+                          <div key={`seg-${s.label}`}>
+                            <div
+                              className="absolute flex items-center justify-center text-[10px] font-bold text-white"
+                              style={{
+                                left: s.x * scale,
+                                top: 0,
+                                width: s.w * scale,
+                                height: deckPx,
+                                background: color,
+                                border: "1px solid rgba(0,0,0,0.25)",
+                                boxSizing: "border-box",
+                                color: s.kind === "bridge" ? "#000" : "#fff",
+                              }}
+                              title={
+                                s.kind === "bridge"
+                                  ? `${s.label}: bridge deck (unsupported span)`
+                                  : `${s.label}: ${s.capacity}-deck holder`
+                              }
+                            >
+                              {s.label}
+                            </div>
+                            {s.kind === "holder" && legPx > 0 && (
+                              <>
+                                <div
+                                  className="absolute"
+                                  style={{
+                                    left: s.x * scale,
+                                    top: deckPx,
+                                    width: 6,
+                                    height: legPx,
+                                    background: color,
+                                  }}
+                                />
+                                <div
+                                  className="absolute"
+                                  style={{
+                                    left: (s.x + s.w) * scale - 6,
+                                    top: deckPx,
+                                    width: 6,
+                                    height: legPx,
+                                    background: color,
+                                  }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {/* floor line */}
+                      <div
+                        className="absolute left-0 border-t-2 border-foreground/60"
+                        style={{ top: sideH, width: canvasW || 1 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Horizontal scale: 1 ft ≈ {scale.toFixed(1)} px. Vertical scale: 1 in ≈{" "}
+                  {vScale.toFixed(1)} px (exaggerated for readability). Labels match the top view.
+                </p>
+              </div>
+            )}
+
+
 
             {result.ok && result.holders.length > 0 && (
               <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
