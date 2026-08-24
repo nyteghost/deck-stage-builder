@@ -157,8 +157,6 @@ function computeConnectors(
 }
 
 function ConnectorIcon({ connector, size }: { connector: Connector; size: number }) {
-  void size;
-
   return (
     <svg
       width={size}
