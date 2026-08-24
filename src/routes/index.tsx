@@ -73,6 +73,132 @@ type ElevationSegment = {
   capacity?: 1 | 2 | 3;
 };
 
+/**
+ * A SICO VMP pin connector: sits on a frame corner post where deck corners meet.
+ * `ways` is how many decks it seats (2 at an edge, 3 along a run, 4 inside).
+ * `rotation` is degrees clockwise from stage front (0° = tab toward front).
+ */
+type Connector = {
+  label: string;
+  x: number;
+  y: number;
+  ways: number;
+  quadrants: Array<[number, number]>; // occupied quadrant directions
+  rotation: number;
+  joins: string[]; // holder / bridge labels meeting here
+};
+
+const CONNECTOR_COLOR = "rgba(120, 113, 108, 0.95)"; // stone / aluminium
+const CONNECTOR_TAB = "rgba(250, 204, 21, 1)"; // reference tab (yellow)
+const QUADRANTS: Array<[number, number]> = [
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1],
+];
+
+function computeConnectors(
+  decks: Deck[],
+  holders: Holder[],
+  bridges: Bridge[],
+): Connector[] {
+  const pieces: Array<{ label: string; x: number; y: number; w: number; h: number }> = [
+    ...holders.map((h) => ({ label: h.label, x: h.x, y: h.y, w: h.w, h: h.h })),
+    ...bridges.map((b) => ({ label: b.label, x: b.x, y: b.y, w: b.w, h: b.h })),
+  ];
+
+  const points = new Map<string, { x: number; y: number; joins: Set<string> }>();
+  for (const p of pieces) {
+    for (const [cx, cy] of [
+      [p.x, p.y],
+      [p.x + p.w, p.y],
+      [p.x, p.y + p.h],
+      [p.x + p.w, p.y + p.h],
+    ] as Array<[number, number]>) {
+      const key = `${cx},${cy}`;
+      const entry = points.get(key) ?? { x: cx, y: cy, joins: new Set<string>() };
+      entry.joins.add(p.label);
+      points.set(key, entry);
+    }
+  }
+
+  const covers = (px: number, py: number) =>
+    decks.some((d) => px > d.x && px < d.x + d.w && py > d.y && py < d.y + d.h);
+
+  const list = [...points.values()]
+    .map((pt) => {
+      const quadrants = QUADRANTS.filter(([dx, dy]) =>
+        covers(pt.x + dx * 0.5, pt.y + dy * 0.5),
+      );
+      let vx = 0;
+      let vy = 0;
+      for (const [dx, dy] of quadrants) {
+        vx += dx;
+        vy += dy;
+      }
+      const rotation =
+        vx === 0 && vy === 0
+          ? 0
+          : (Math.round((Math.atan2(vx, -vy) * 180) / Math.PI / 45) * 45 + 360) % 360;
+      return {
+        label: "",
+        x: pt.x,
+        y: pt.y,
+        ways: quadrants.length,
+        quadrants,
+        rotation,
+        joins: [...pt.joins].sort(),
+      };
+    })
+    .filter((c) => c.ways > 0)
+    .sort((a, b) => (a.y !== b.y ? a.y - b.y : a.x - b.x));
+
+  return list.map((c, i) => ({ ...c, label: `C${i + 1}` }));
+}
+
+function ConnectorIcon({ connector, size }: { connector: Connector; size: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="-50 -50 100 100"
+      className="pointer-events-none"
+      aria-hidden="true"
+    >
+      {connector.quadrants.map(([dx, dy], i) => {
+        const len = 34;
+        const cx = dx * len * 0.72;
+        const cy = dy * len * 0.72;
+        return (
+          <g key={i}>
+            <line
+              x1={0}
+              y1={0}
+              x2={cx}
+              y2={cy}
+              stroke={CONNECTOR_COLOR}
+              strokeWidth={9}
+              strokeLinecap="round"
+            />
+            {/* tapered pin head over the deck corner it seats */}
+            <circle cx={cx} cy={cy} r={11} fill={CONNECTOR_COLOR} />
+            <circle cx={cx} cy={cy} r={4} fill="rgba(255,255,255,0.85)" />
+          </g>
+        );
+      })}
+      {/* connector body */}
+      <circle cx={0} cy={0} r={20} fill={CONNECTOR_COLOR} stroke="rgba(0,0,0,0.45)" strokeWidth={3} />
+      {/* reference tab — always points to stage front */}
+      <rect x={-5} y={-30} width={10} height={16} rx={2} fill={CONNECTOR_TAB} stroke="rgba(0,0,0,0.4)" strokeWidth={2} />
+      <text x={0} y={6} textAnchor="middle" fontSize={20} fontWeight="700" fill="#fff">
+        {connector.ways}
+      </text>
+    </svg>
+  );
+}
+
+
+
 
 /**
  * Best way to split a strip of K decks into pieces of size 1/2/3 using
@@ -320,6 +446,7 @@ function Index() {
   const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
 
   const [view, setView] = useState<"top" | "side" | "both">("both");
+  const [showConnectors, setShowConnectors] = useState(true);
 
   const result = useMemo(() => planStage(width, length), [width, length]);
   const totalArea = width * length;
@@ -328,6 +455,14 @@ function Index() {
   const scale = Math.min(maxPx / Math.max(width, 1), maxPx / Math.max(length, 1), 32);
   const canvasW = width * scale;
   const canvasH = length * scale;
+
+  const connectors = useMemo<Connector[]>(
+    () => (result.ok ? computeConnectors(result.decks, result.holders, result.bridges) : []),
+    [result],
+  );
+  const connectorPx = Math.max(18, Math.min(40, scale * 0.9));
+
+
 
   // Cross-section along the stage width, taken at the front edge (y = 0).
   const elevation = useMemo<ElevationSegment[]>(() => {
@@ -619,11 +754,54 @@ function Index() {
                           </span>
                         </div>
                       ))}
+                      {showConnectors &&
+                        connectors.map((c) => (
+                          <div
+                            key={c.label}
+                            className="pointer-events-none absolute"
+                            style={{
+                              left: c.x * scale - connectorPx / 2,
+                              top: c.y * scale - connectorPx / 2,
+                              width: connectorPx,
+                              height: connectorPx,
+                            }}
+                            title={`${c.label}: ${c.ways}-way pin connector, ${c.rotation}° — joins ${c.joins.join(", ")}`}
+                          >
+                            <ConnectorIcon connector={c} size={connectorPx} />
+                          </div>
+                        ))}
                     </div>
                   </div>
+
+                  {showConnectors && (
+                    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/40 p-3">
+                      <img
+                        src={connectorPhoto.url}
+                        alt="SICO VMP 4-way pin connector on a frame corner post"
+                        className="h-20 w-20 rounded-md border border-border object-cover"
+                        loading="lazy"
+                      />
+                      <div className="text-xs text-muted-foreground">
+                        <div className="font-semibold text-foreground">Pin connector</div>
+                        <p className="mt-0.5 max-w-md">
+                          Drops onto each frame corner post; the tapered pins seat the deck corners
+                          and lock adjacent decks together. The number on each symbol is how many
+                          decks it seats — 2-way at a stage edge, 3-way along a run, 4-way where four
+                          decks meet. The{" "}
+                          <span className="font-semibold" style={{ color: CONNECTOR_TAB }}>
+                            yellow tab
+                          </span>{" "}
+                          is the reference face: install every connector with the tab toward the
+                          stage front (top of this drawing).
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <p className="mt-3 text-xs text-muted-foreground">
                     Scale: 1 ft ≈ {scale.toFixed(1)} px. Origin (0,0) is top-left.
                   </p>
+
                 </>
               ) : (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
