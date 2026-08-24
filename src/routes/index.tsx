@@ -456,6 +456,14 @@ function Index() {
   const canvasW = width * scale;
   const canvasH = length * scale;
 
+  const connectors = useMemo<Connector[]>(
+    () => (result.ok ? computeConnectors(result.decks, result.holders, result.bridges) : []),
+    [result],
+  );
+  const connectorPx = Math.max(18, Math.min(40, scale * 0.9));
+
+
+
   // Cross-section along the stage width, taken at the front edge (y = 0).
   const elevation = useMemo<ElevationSegment[]>(() => {
     if (!result.ok) return [];
