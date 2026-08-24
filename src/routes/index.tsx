@@ -157,9 +157,8 @@ function computeConnectors(
 }
 
 function ConnectorIcon({ connector, size }: { connector: Connector; size: number }) {
-  const r = size / 2;
-  const body = r * 0.42;
-  const pin = r * 0.34;
+  void size;
+
   return (
     <svg
       width={size}
@@ -196,8 +195,6 @@ function ConnectorIcon({ connector, size }: { connector: Connector; size: number
       <text x={0} y={6} textAnchor="middle" fontSize={20} fontWeight="700" fill="#fff">
         {connector.ways}
       </text>
-      {/* keep computed sizes referenced for lint clarity */}
-      <desc>{`${body.toFixed(0)}/${pin.toFixed(0)}`}</desc>
     </svg>
   );
 }
