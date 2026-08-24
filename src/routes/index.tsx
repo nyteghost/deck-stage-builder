@@ -745,11 +745,54 @@ function Index() {
                           </span>
                         </div>
                       ))}
+                      {showConnectors &&
+                        connectors.map((c) => (
+                          <div
+                            key={c.label}
+                            className="pointer-events-none absolute"
+                            style={{
+                              left: c.x * scale - connectorPx / 2,
+                              top: c.y * scale - connectorPx / 2,
+                              width: connectorPx,
+                              height: connectorPx,
+                            }}
+                            title={`${c.label}: ${c.ways}-way pin connector, ${c.rotation}° — joins ${c.joins.join(", ")}`}
+                          >
+                            <ConnectorIcon connector={c} size={connectorPx} />
+                          </div>
+                        ))}
                     </div>
                   </div>
+
+                  {showConnectors && (
+                    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/40 p-3">
+                      <img
+                        src={connectorPhoto.url}
+                        alt="SICO VMP 4-way pin connector on a frame corner post"
+                        className="h-20 w-20 rounded-md border border-border object-cover"
+                        loading="lazy"
+                      />
+                      <div className="text-xs text-muted-foreground">
+                        <div className="font-semibold text-foreground">Pin connector</div>
+                        <p className="mt-0.5 max-w-md">
+                          Drops onto each frame corner post; the tapered pins seat the deck corners
+                          and lock adjacent decks together. The number on each symbol is how many
+                          decks it seats — 2-way at a stage edge, 3-way along a run, 4-way where four
+                          decks meet. The{" "}
+                          <span className="font-semibold" style={{ color: CONNECTOR_TAB }}>
+                            yellow tab
+                          </span>{" "}
+                          is the reference face: install every connector with the tab toward the
+                          stage front (top of this drawing).
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <p className="mt-3 text-xs text-muted-foreground">
                     Scale: 1 ft ≈ {scale.toFixed(1)} px. Origin (0,0) is top-left.
                   </p>
+
                 </>
               ) : (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
