@@ -774,16 +774,19 @@ function Index() {
                         connectors.map((c) => (
                           <div
                             key={c.label}
-                            className="pointer-events-none absolute"
+                            className="pointer-events-none absolute flex flex-col items-center"
                             style={{
                               left: c.x * scale - connectorPx / 2,
                               top: c.y * scale - connectorPx / 2,
                               width: connectorPx,
-                              height: connectorPx,
+                              height: connectorPx + 14,
                             }}
                             title={`${c.label}: ${c.ways}-way pin connector, ${c.rotation}° — joins ${c.joins.join(", ")}`}
                           >
                             <ConnectorIcon connector={c} size={connectorPx} />
+                            <span className="mt-0.5 text-[9px] font-bold leading-none text-foreground">
+                              {c.rotation}°
+                            </span>
                           </div>
                         ))}
                     </div>
