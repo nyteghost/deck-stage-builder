@@ -667,6 +667,7 @@ function Index() {
                           <div>{totals.two}× 2-deck holder (8&#39;×8&#39;)</div>
                           <div>{totals.one}× 1-deck holder (4&#39;×8&#39;)</div>
                           <div>{result.bridges.length}× bridge deck (4&#39;×8&#39;)</div>
+                          <div>{connectors.length}× pin connector</div>
                         </div>
                         {result.holderError && (
                           <div className="mt-1 text-xs font-medium text-destructive">
