@@ -152,7 +152,7 @@ function computeConnectors(
         joins: [...pt.joins].sort(),
       };
     })
-    .filter((c) => c.ways > 0)
+    .filter((c) => c.ways >= 2)
     .sort((a, b) => (a.y !== b.y ? a.y - b.y : a.x - b.x));
 
   return list.map((c, i) => ({ ...c, label: `C${i + 1}` }));
