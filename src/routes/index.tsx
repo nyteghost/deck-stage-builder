@@ -104,6 +104,9 @@ function computeConnectors(
   holders: Holder[],
   bridges: Bridge[],
 ): Connector[] {
+  const stageW = Math.max(...decks.map((d) => d.x + d.w));
+  const stageH = Math.max(...decks.map((d) => d.y + d.h));
+
   const pieces: Array<{ label: string; x: number; y: number; w: number; h: number }> = [
     ...holders.map((h) => ({ label: h.label, x: h.x, y: h.y, w: h.w, h: h.h })),
     ...bridges.map((b) => ({ label: b.label, x: b.x, y: b.y, w: b.w, h: b.h })),
@@ -153,6 +156,7 @@ function computeConnectors(
       };
     })
     .filter((c) => c.ways >= 2)
+    .filter((c) => c.x > 0 && c.x < stageW && c.y > 0 && c.y < stageH)
     .sort((a, b) => (a.y !== b.y ? a.y - b.y : a.x - b.x));
 
   return list.map((c, i) => ({ ...c, label: `C${i + 1}` }));
