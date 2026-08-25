@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import connectorPhoto from "@/assets/vmp-pin-connector.webp.asset.json";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -150,7 +152,7 @@ function computeConnectors(
         joins: [...pt.joins].sort(),
       };
     })
-    .filter((c) => c.ways > 0)
+    .filter((c) => c.ways >= 2)
     .sort((a, b) => (a.y !== b.y ? a.y - b.y : a.x - b.x));
 
   return list.map((c, i) => ({ ...c, label: `C${i + 1}` }));
@@ -600,6 +602,19 @@ function Index() {
                 </div>
               </div>
 
+              <div className="flex items-center gap-2">
+                <input
+                  id="show-connectors"
+                  type="checkbox"
+                  checked={showConnectors}
+                  onChange={(e) => setShowConnectors(e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
+                />
+                <label htmlFor="show-connectors" className="text-sm font-medium">
+                  Show connectors
+                </label>
+              </div>
+
               <div className="rounded-md bg-muted p-3 text-sm">
                 <div className="flex justify-between py-0.5">
                   <span className="text-muted-foreground">Stage area</span>
@@ -652,6 +667,7 @@ function Index() {
                           <div>{totals.two}× 2-deck holder (8&#39;×8&#39;)</div>
                           <div>{totals.one}× 1-deck holder (4&#39;×8&#39;)</div>
                           <div>{result.bridges.length}× bridge deck (4&#39;×8&#39;)</div>
+                          <div>{connectors.length}× pin connector</div>
                         </div>
                         {result.holderError && (
                           <div className="mt-1 text-xs font-medium text-destructive">
@@ -758,16 +774,19 @@ function Index() {
                         connectors.map((c) => (
                           <div
                             key={c.label}
-                            className="pointer-events-none absolute"
+                            className="pointer-events-none absolute flex flex-col items-center"
                             style={{
                               left: c.x * scale - connectorPx / 2,
                               top: c.y * scale - connectorPx / 2,
                               width: connectorPx,
-                              height: connectorPx,
+                              height: connectorPx + 14,
                             }}
                             title={`${c.label}: ${c.ways}-way pin connector, ${c.rotation}° — joins ${c.joins.join(", ")}`}
                           >
                             <ConnectorIcon connector={c} size={connectorPx} />
+                            <span className="mt-0.5 text-[9px] font-bold leading-none text-foreground">
+                              {c.rotation}°
+                            </span>
                           </div>
                         ))}
                     </div>
@@ -990,6 +1009,42 @@ function Index() {
                           <td className="py-2 pr-3">
                             x: {br.x}–{br.x + br.w}, y: {br.y}–{br.y + br.h}
                           </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {result.ok && connectors.length > 0 && (
+              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+                <div className="mb-3 text-sm font-semibold">Pin connector placement</div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="text-muted-foreground">
+                      <tr className="border-b border-border">
+                        <th className="py-2 pr-3">Connector</th>
+                        <th className="py-2 pr-3">Position (x, y) ft</th>
+                        <th className="py-2 pr-3">Way count</th>
+                        <th className="py-2 pr-3">Rotation</th>
+                        <th className="py-2 pr-3">Joins</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {connectors.map((c) => (
+                        <tr key={c.label} className="border-b border-border/60 last:border-0">
+                          <td className="py-2 pr-3 font-semibold">
+                            <span
+                              className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle"
+                              style={{ background: CONNECTOR_TAB }}
+                            />
+                            {c.label}
+                          </td>
+                          <td className="py-2 pr-3">({c.x}, {c.y})</td>
+                          <td className="py-2 pr-3">{c.ways}-way</td>
+                          <td className="py-2 pr-3">{c.rotation}°</td>
+                          <td className="py-2 pr-3">{c.joins.join(", ")}</td>
                         </tr>
                       ))}
                     </tbody>
