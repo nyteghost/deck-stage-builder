@@ -107,22 +107,38 @@ function computeConnectors(
   const stageW = Math.max(...decks.map((d) => d.x + d.w));
   const stageH = Math.max(...decks.map((d) => d.y + d.h));
 
-  const pieces: Array<{ label: string; x: number; y: number; w: number; h: number }> = [
-    ...holders.map((h) => ({ label: h.label, x: h.x, y: h.y, w: h.w, h: h.h })),
-    ...bridges.map((b) => ({ label: b.label, x: b.x, y: b.y, w: b.w, h: b.h })),
-  ];
+  // Map every physical deck to the holder or bridge it belongs to.
+  const deckToPiece = new Map<string, string>();
+  for (const h of holders) {
+    for (const d of decks) {
+      if (
+        d.x >= h.x &&
+        d.y >= h.y &&
+        d.x + d.w <= h.x + h.w &&
+        d.y + d.h <= h.y + h.h
+      ) {
+        deckToPiece.set(`${d.x},${d.y},${d.w},${d.h}`, h.label);
+      }
+    }
+  }
+  for (const b of bridges) {
+    deckToPiece.set(`${b.x},${b.y},${b.w},${b.h}`, b.label);
+  }
 
+  // Collect every deck corner. A connector belongs wherever two or more deck
+  // corners coincide and the point is not on the outside edge of the stage.
   const points = new Map<string, { x: number; y: number; joins: Set<string> }>();
-  for (const p of pieces) {
+  for (const d of decks) {
+    const piece = deckToPiece.get(`${d.x},${d.y},${d.w},${d.h}`) ?? "?";
     for (const [cx, cy] of [
-      [p.x, p.y],
-      [p.x + p.w, p.y],
-      [p.x, p.y + p.h],
-      [p.x + p.w, p.y + p.h],
+      [d.x, d.y],
+      [d.x + d.w, d.y],
+      [d.x, d.y + d.h],
+      [d.x + d.w, d.y + d.h],
     ] as Array<[number, number]>) {
       const key = `${cx},${cy}`;
       const entry = points.get(key) ?? { x: cx, y: cy, joins: new Set<string>() };
-      entry.joins.add(p.label);
+      entry.joins.add(piece);
       points.set(key, entry);
     }
   }
