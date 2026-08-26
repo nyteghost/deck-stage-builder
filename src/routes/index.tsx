@@ -86,11 +86,14 @@ type Connector = {
   y: number;
   ways: number;
   quadrants: Array<[number, number]>; // occupied quadrant directions
+  quadrantPieces: string[]; // piece label seated in each quadrant
+  host: string; // piece the connector post is mounted on
   rotation: number;
   joins: string[]; // holder / bridge labels meeting here
 };
 
-const CONNECTOR_COLOR = "rgba(120, 113, 108, 0.95)"; // stone / aluminium
+const CONNECTOR_COLOR = "rgba(148, 143, 138, 0.98)"; // aluminium / silver pins
+const CONNECTOR_HOST_COLOR = "rgba(24, 24, 27, 0.98)"; // black — mounted side
 const CONNECTOR_TAB = "rgba(250, 204, 21, 1)"; // reference tab (yellow)
 const QUADRANTS: Array<[number, number]> = [
   [-1, -1],
@@ -99,13 +102,14 @@ const QUADRANTS: Array<[number, number]> = [
   [1, 1],
 ];
 
+
 function computeConnectors(
   decks: Deck[],
   holders: Holder[],
   bridges: Bridge[],
 ): Connector[] {
-  const stageW = Math.max(...decks.map((d) => d.x + d.w));
-  const stageH = Math.max(...decks.map((d) => d.y + d.h));
+
+
 
   // Map every physical deck to the holder or bridge it belongs to.
   const deckToPiece = new Map<string, string>();
@@ -143,14 +147,22 @@ function computeConnectors(
     }
   }
 
-  const covers = (px: number, py: number) =>
-    decks.some((d) => px > d.x && px < d.x + d.w && py > d.y && py < d.y + d.h);
+  const deckAt = (px: number, py: number) =>
+    decks.find((d) => px > d.x && px < d.x + d.w && py > d.y && py < d.y + d.h);
 
   const list = [...points.values()]
     .map((pt) => {
       const quadrants = QUADRANTS.filter(([dx, dy]) =>
-        covers(pt.x + dx * 0.5, pt.y + dy * 0.5),
+        deckAt(pt.x + dx * 0.5, pt.y + dy * 0.5),
       );
+      const quadrantPieces = quadrants.map(([dx, dy]) => {
+        const d = deckAt(pt.x + dx * 0.5, pt.y + dy * 0.5)!;
+        return deckToPiece.get(`${d.x},${d.y},${d.w},${d.h}`) ?? "?";
+      });
+      // The post is mounted on a holder (never on an unsupported bridge deck).
+      const holderLabels = new Set(holders.map((h) => h.label));
+      const host =
+        quadrantPieces.find((p) => holderLabels.has(p)) ?? quadrantPieces[0] ?? "?";
       let vx = 0;
       let vy = 0;
       for (const [dx, dy] of quadrants) {
@@ -167,15 +179,17 @@ function computeConnectors(
         y: pt.y,
         ways: quadrants.length,
         quadrants,
+        quadrantPieces,
+        host,
         rotation,
         joins: [...pt.joins].sort(),
       };
     })
     .filter((c) => c.ways >= 2)
-    .filter((c) => c.x > 0 && c.x < stageW && c.y > 0 && c.y < stageH)
     .sort((a, b) => (a.y !== b.y ? a.y - b.y : a.x - b.x));
 
   return list.map((c, i) => ({ ...c, label: `C${i + 1}` }));
+
 }
 
 function ConnectorIcon({ connector, size }: { connector: Connector; size: number }) {
@@ -191,6 +205,8 @@ function ConnectorIcon({ connector, size }: { connector: Connector; size: number
         const len = 34;
         const cx = dx * len * 0.72;
         const cy = dy * len * 0.72;
+        const isHost = connector.quadrantPieces[i] === connector.host;
+        const color = isHost ? CONNECTOR_HOST_COLOR : CONNECTOR_COLOR;
         return (
           <g key={i}>
             <line
@@ -198,18 +214,19 @@ function ConnectorIcon({ connector, size }: { connector: Connector; size: number
               y1={0}
               x2={cx}
               y2={cy}
-              stroke={CONNECTOR_COLOR}
+              stroke={color}
               strokeWidth={9}
               strokeLinecap="round"
             />
             {/* tapered pin head over the deck corner it seats */}
-            <circle cx={cx} cy={cy} r={11} fill={CONNECTOR_COLOR} />
+            <circle cx={cx} cy={cy} r={11} fill={color} />
             <circle cx={cx} cy={cy} r={4} fill="rgba(255,255,255,0.85)" />
           </g>
         );
       })}
-      {/* connector body */}
-      <circle cx={0} cy={0} r={20} fill={CONNECTOR_COLOR} stroke="rgba(0,0,0,0.45)" strokeWidth={3} />
+      {/* connector body — black, mounted on the host holder */}
+      <circle cx={0} cy={0} r={20} fill={CONNECTOR_HOST_COLOR} stroke="rgba(0,0,0,0.55)" strokeWidth={3} />
+
       {/* reference tab — always points to stage front */}
       <rect x={-5} y={-30} width={10} height={16} rx={2} fill={CONNECTOR_TAB} stroke="rgba(0,0,0,0.4)" strokeWidth={2} />
       <text x={0} y={6} textAnchor="middle" fontSize={20} fontWeight="700" fill="#fff">
@@ -1048,7 +1065,9 @@ function Index() {
                         <th className="py-2 pr-3">Position (x, y) ft</th>
                         <th className="py-2 pr-3">Way count</th>
                         <th className="py-2 pr-3">Rotation</th>
+                        <th className="py-2 pr-3">Mounted on (black)</th>
                         <th className="py-2 pr-3">Joins</th>
+
                       </tr>
                     </thead>
                     <tbody>
@@ -1064,7 +1083,9 @@ function Index() {
                           <td className="py-2 pr-3">({c.x}, {c.y})</td>
                           <td className="py-2 pr-3">{c.ways}-way</td>
                           <td className="py-2 pr-3">{c.rotation}°</td>
+                          <td className="py-2 pr-3">{c.host}</td>
                           <td className="py-2 pr-3">{c.joins.join(", ")}</td>
+
                         </tr>
                       ))}
                     </tbody>
