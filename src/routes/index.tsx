@@ -86,11 +86,14 @@ type Connector = {
   y: number;
   ways: number;
   quadrants: Array<[number, number]>; // occupied quadrant directions
+  quadrantPieces: string[]; // piece label seated in each quadrant
+  host: string; // piece the connector post is mounted on
   rotation: number;
   joins: string[]; // holder / bridge labels meeting here
 };
 
-const CONNECTOR_COLOR = "rgba(120, 113, 108, 0.95)"; // stone / aluminium
+const CONNECTOR_COLOR = "rgba(148, 143, 138, 0.98)"; // aluminium / silver pins
+const CONNECTOR_HOST_COLOR = "rgba(24, 24, 27, 0.98)"; // black — mounted side
 const CONNECTOR_TAB = "rgba(250, 204, 21, 1)"; // reference tab (yellow)
 const QUADRANTS: Array<[number, number]> = [
   [-1, -1],
@@ -98,6 +101,7 @@ const QUADRANTS: Array<[number, number]> = [
   [-1, 1],
   [1, 1],
 ];
+
 
 function computeConnectors(
   decks: Deck[],
