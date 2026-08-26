@@ -1083,7 +1083,9 @@ function Index() {
                           <td className="py-2 pr-3">({c.x}, {c.y})</td>
                           <td className="py-2 pr-3">{c.ways}-way</td>
                           <td className="py-2 pr-3">{c.rotation}°</td>
+                          <td className="py-2 pr-3">{c.host}</td>
                           <td className="py-2 pr-3">{c.joins.join(", ")}</td>
+
                         </tr>
                       ))}
                     </tbody>
