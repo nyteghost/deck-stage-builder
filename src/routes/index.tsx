@@ -108,8 +108,8 @@ function computeConnectors(
   holders: Holder[],
   bridges: Bridge[],
 ): Connector[] {
-  const stageW = Math.max(...decks.map((d) => d.x + d.w));
-  const stageH = Math.max(...decks.map((d) => d.y + d.h));
+
+
 
   // Map every physical deck to the holder or bridge it belongs to.
   const deckToPiece = new Map<string, string>();
