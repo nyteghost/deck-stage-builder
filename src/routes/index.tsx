@@ -205,6 +205,8 @@ function ConnectorIcon({ connector, size }: { connector: Connector; size: number
         const len = 34;
         const cx = dx * len * 0.72;
         const cy = dy * len * 0.72;
+        const isHost = connector.quadrantPieces[i] === connector.host;
+        const color = isHost ? CONNECTOR_HOST_COLOR : CONNECTOR_COLOR;
         return (
           <g key={i}>
             <line
@@ -212,18 +214,19 @@ function ConnectorIcon({ connector, size }: { connector: Connector; size: number
               y1={0}
               x2={cx}
               y2={cy}
-              stroke={CONNECTOR_COLOR}
+              stroke={color}
               strokeWidth={9}
               strokeLinecap="round"
             />
             {/* tapered pin head over the deck corner it seats */}
-            <circle cx={cx} cy={cy} r={11} fill={CONNECTOR_COLOR} />
+            <circle cx={cx} cy={cy} r={11} fill={color} />
             <circle cx={cx} cy={cy} r={4} fill="rgba(255,255,255,0.85)" />
           </g>
         );
       })}
-      {/* connector body */}
-      <circle cx={0} cy={0} r={20} fill={CONNECTOR_COLOR} stroke="rgba(0,0,0,0.45)" strokeWidth={3} />
+      {/* connector body — black, mounted on the host holder */}
+      <circle cx={0} cy={0} r={20} fill={CONNECTOR_HOST_COLOR} stroke="rgba(0,0,0,0.55)" strokeWidth={3} />
+
       {/* reference tab — always points to stage front */}
       <rect x={-5} y={-30} width={10} height={16} rx={2} fill={CONNECTOR_TAB} stroke="rgba(0,0,0,0.4)" strokeWidth={2} />
       <text x={0} y={6} textAnchor="middle" fontSize={20} fontWeight="700" fill="#fff">
