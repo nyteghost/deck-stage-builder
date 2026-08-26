@@ -147,14 +147,22 @@ function computeConnectors(
     }
   }
 
-  const covers = (px: number, py: number) =>
-    decks.some((d) => px > d.x && px < d.x + d.w && py > d.y && py < d.y + d.h);
+  const deckAt = (px: number, py: number) =>
+    decks.find((d) => px > d.x && px < d.x + d.w && py > d.y && py < d.y + d.h);
 
   const list = [...points.values()]
     .map((pt) => {
       const quadrants = QUADRANTS.filter(([dx, dy]) =>
-        covers(pt.x + dx * 0.5, pt.y + dy * 0.5),
+        deckAt(pt.x + dx * 0.5, pt.y + dy * 0.5),
       );
+      const quadrantPieces = quadrants.map(([dx, dy]) => {
+        const d = deckAt(pt.x + dx * 0.5, pt.y + dy * 0.5)!;
+        return deckToPiece.get(`${d.x},${d.y},${d.w},${d.h}`) ?? "?";
+      });
+      // The post is mounted on a holder (never on an unsupported bridge deck).
+      const holderLabels = new Set(holders.map((h) => h.label));
+      const host =
+        quadrantPieces.find((p) => holderLabels.has(p)) ?? quadrantPieces[0] ?? "?";
       let vx = 0;
       let vy = 0;
       for (const [dx, dy] of quadrants) {
@@ -171,15 +179,17 @@ function computeConnectors(
         y: pt.y,
         ways: quadrants.length,
         quadrants,
+        quadrantPieces,
+        host,
         rotation,
         joins: [...pt.joins].sort(),
       };
     })
     .filter((c) => c.ways >= 2)
-    .filter((c) => c.x > 0 && c.x < stageW && c.y > 0 && c.y < stageH)
     .sort((a, b) => (a.y !== b.y ? a.y - b.y : a.x - b.x));
 
   return list.map((c, i) => ({ ...c, label: `C${i + 1}` }));
+
 }
 
 function ConnectorIcon({ connector, size }: { connector: Connector; size: number }) {
