@@ -1065,7 +1065,9 @@ function Index() {
                         <th className="py-2 pr-3">Position (x, y) ft</th>
                         <th className="py-2 pr-3">Way count</th>
                         <th className="py-2 pr-3">Rotation</th>
+                        <th className="py-2 pr-3">Mounted on (black)</th>
                         <th className="py-2 pr-3">Joins</th>
+
                       </tr>
                     </thead>
                     <tbody>
