@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import connectorPhoto from "@/assets/vmp-pin-connector.webp.asset.json";
+
 
 
 export const Route = createFileRoute("/")({
