@@ -474,18 +474,6 @@ function Index() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  id="show-connectors"
-                  type="checkbox"
-                  checked={showConnectors}
-                  onChange={(e) => setShowConnectors(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
-                />
-                <label htmlFor="show-connectors" className="text-sm font-medium">
-                  Show connectors
-                </label>
-              </div>
 
               <div className="rounded-md bg-muted p-3 text-sm">
                 <div className="flex justify-between py-0.5">
