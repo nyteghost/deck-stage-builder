@@ -80,72 +80,20 @@ type ElevationSegment = {
 
 
 /**
- * Best way to split a strip of K decks into pieces of size 1/2/3 using
- * the available holder counts, minimizing total holders used.
- * Returns null if impossible. Tries 3-deck first, then 2-deck, then 1-deck.
+ * Ways to cut a run of `r` adjacent decks into holders of 1/2/3 decks,
+ * preferred order: fewest 1-deck holders, then fewest holders overall.
  */
-type StripItem =
-  | { kind: "holder"; size: 1 | 2 | 3 }
-  | { kind: "bridge" };
-
-/**
- * Best way to cover a strip of K decks using holders (size 1/2/3) and
- * "bridges" — single decks that span between two adjacent holders without
- * needing their own holder. Minimizes holders used, then bridges, drawing
- * from the shared inventory.
- */
-function splitStrip(
-  K: number,
-  avail: { one: number; two: number; three: number },
-): { items: StripItem[]; used: { one: number; two: number; three: number }; bridges: number } | null {
-  let best: { c1: number; c2: number; c3: number; b: number; H: number } | null = null;
-  for (let c3 = 0; c3 <= Math.min(avail.three, Math.floor(K / 3)); c3++) {
-    for (let c2 = 0; c2 <= Math.min(avail.two, Math.floor((K - 3 * c3) / 2)); c2++) {
-      const maxC1 = Math.min(avail.one, K - 3 * c3 - 2 * c2);
-      for (let c1 = 0; c1 <= maxC1; c1++) {
-        const covered = 3 * c3 + 2 * c2 + c1;
-        const b = K - covered;
-        if (b < 0) continue;
-        const H = c1 + c2 + c3;
-        // bridges need 2 holders at their ends → at most H-1 bridges
-        if (b > 0 && H < 2) continue;
-        if (b > Math.max(0, H - 1)) continue;
-        // Score: bridges are valuable, single-deck holders are heavily penalized.
-        // Tie-break on fewest total holders.
-        const score = b * 2 - c1 * 5;
-        const bestScore = best ? best.b * 2 - best.c1 * 5 : -Infinity;
-        if (
-          !best ||
-          score > bestScore ||
-          (score === bestScore && b > best.b) ||
-          (score === bestScore && b === best.b && H < best.H)
-        ) {
-          best = { c1, c2, c3, b, H };
-        }
-      }
-
+function runOptions(r: number): { three: number; two: number; one: number }[] {
+  const opts: { three: number; two: number; one: number }[] = [];
+  for (let c3 = Math.floor(r / 3); c3 >= 0; c3--) {
+    for (let c2 = Math.floor((r - 3 * c3) / 2); c2 >= 0; c2--) {
+      const c1 = r - 3 * c3 - 2 * c2;
+      if (c1 < 0) continue;
+      opts.push({ three: c3, two: c2, one: c1 });
     }
   }
-  if (!best) return null;
-  // Build sequence: largest holders first, drop bridges between them.
-  const holders: (1 | 2 | 3)[] = [];
-  for (let i = 0; i < best.c3; i++) holders.push(3);
-  for (let i = 0; i < best.c2; i++) holders.push(2);
-  for (let i = 0; i < best.c1; i++) holders.push(1);
-  const items: StripItem[] = [];
-  let bridgesLeft = best.b;
-  for (let i = 0; i < holders.length; i++) {
-    items.push({ kind: "holder", size: holders[i] });
-    if (i < holders.length - 1 && bridgesLeft > 0) {
-      items.push({ kind: "bridge" });
-      bridgesLeft--;
-    }
-  }
-  return {
-    items,
-    used: { one: best.c1, two: best.c2, three: best.c3 },
-    bridges: best.b,
-  };
+  opts.sort((p, q) => (p.one - q.one) || (p.three + p.two + p.one - (q.three + q.two + q.one)));
+  return opts;
 }
 
 function planStage(widthFt: number, lengthFt: number): Result {
@@ -156,7 +104,7 @@ function planStage(widthFt: number, lengthFt: number): Result {
     return {
       ok: false,
       reason:
-        "Both width and length must be multiples of 4 ft — 4×8 decks can't be cut to fit otherwise.",
+        "Both width and length must be multiples of 4 ft \u2014 4\u00d78 decks can't be cut to fit otherwise.",
     };
   }
   const a = widthFt / 4;
@@ -165,7 +113,7 @@ function planStage(widthFt: number, lengthFt: number): Result {
     return {
       ok: false,
       reason:
-        "This size can't be built from whole 4×8 decks: at least one side must be a multiple of 8 ft.",
+        "This size can't be built from whole 4\u00d78 decks: at least one side must be a multiple of 8 ft.",
     };
   }
 
@@ -176,19 +124,31 @@ function planStage(widthFt: number, lengthFt: number): Result {
     holderError?: string;
     totalHolders: number;
     totalBridges: number;
+    singles: number;
   };
 
-  function buildOrientation(orientation: "horizontal" | "vertical"): Attempt | null {
+  // A "pattern" decides which decks are carried as bridges instead of sitting
+  // on their own holder:
+  //  - crossOffset: whole strips (every other one) are bridged, resting on the
+  //    holders in the strips either side.
+  //  - inOffset: inside a holder strip, every other deck bridges between the
+  //    two holders next to it.
+  type Pattern = { crossOffset: number | null; inOffset: number | null };
+
+  function buildOrientation(
+    orientation: "horizontal" | "vertical",
+    pattern: Pattern,
+  ): Attempt | null {
     const decks: Deck[] = [];
     const strips: { decks: Deck[]; axis: "y" | "x" }[] = [];
 
     if (orientation === "horizontal") {
       if (a % 2 !== 0) return null;
-      // decks 8×4, strips along Y
+      // decks 8\u00d74, strips along Y
       for (let i = 0; i < a; i += 2) {
         const strip: Deck[] = [];
         for (let j = 0; j < b; j++) {
-          const d = { x: i * 4, y: j * 4, w: 8, h: 4 };
+          const d: Deck = { x: i * 4, y: j * 4, w: 8, h: 4 };
           decks.push(d);
           strip.push(d);
         }
@@ -196,11 +156,11 @@ function planStage(widthFt: number, lengthFt: number): Result {
       }
     } else {
       if (b % 2 !== 0) return null;
-      // decks 4×8, strips along X
+      // decks 4\u00d78, strips along X
       for (let j = 0; j < b; j += 2) {
         const strip: Deck[] = [];
         for (let i = 0; i < a; i++) {
-          const d = { x: i * 4, y: j * 4, w: 4, h: 8 };
+          const d: Deck = { x: i * 4, y: j * 4, w: 4, h: 8 };
           decks.push(d);
           strip.push(d);
         }
@@ -208,145 +168,148 @@ function planStage(widthFt: number, lengthFt: number): Result {
       }
     }
 
+    const S = strips.length;
+    const K = strips[0].decks.length;
+
+    // ---- decide which cells are bridges ----
+    const isBridge: boolean[][] = strips.map(() => new Array(K).fill(false));
+    const bridgedStrip: boolean[] = new Array(S).fill(false);
+    if (pattern.crossOffset !== null && S >= 3) {
+      for (let s = 1; s < S - 1; s++) {
+        if ((s - pattern.crossOffset) % 2 === 0) {
+          bridgedStrip[s] = true;
+          for (let p = 0; p < K; p++) isBridge[s][p] = true;
+        }
+      }
+    }
+    if (pattern.inOffset !== null && K >= 3) {
+      for (let s = 0; s < S; s++) {
+        if (bridgedStrip[s]) continue;
+        // a strip that supports a bridged strip must stay solid
+        if (bridgedStrip[s - 1] || bridgedStrip[s + 1]) continue;
+        for (let p = 1; p < K - 1; p++) {
+          if ((p - pattern.inOffset) % 2 === 0) isBridge[s][p] = true;
+        }
+      }
+    }
+
+    // ---- validate every bridge has support on both sides ----
+    const supportedBy: ("cross" | "in")[][] = strips.map(() => new Array(K).fill("cross"));
+    for (let s = 0; s < S; s++) {
+      for (let p = 0; p < K; p++) {
+        if (!isBridge[s][p]) continue;
+        const cross =
+          s > 0 && s < S - 1 && !isBridge[s - 1][p] && !isBridge[s + 1][p];
+        const inline =
+          p > 0 && p < K - 1 && !isBridge[s][p - 1] && !isBridge[s][p + 1];
+        if (cross) supportedBy[s][p] = "cross";
+        else if (inline) supportedBy[s][p] = "in";
+        else return null; // unsupported bridge \u2014 pattern invalid
+      }
+    }
+
+    // ---- lay holders over the remaining runs ----
     const avail = {
       one: INVENTORY.holders.one.count,
       two: INVENTORY.holders.two.count,
       three: INVENTORY.holders.three.count,
     };
-    const holders: Holder[] = [];
-    const bridges: Bridge[] = [];
+    type PH = { decks: Deck[]; axis: "x" | "y"; label: string };
+    const cellHolder = new Map<string, PH>();
+    const phs: PH[] = [];
     let holderError: string | undefined;
+    let singles = 0;
+
+    for (let s = 0; s < S; s++) {
+      let p = 0;
+      while (p < K) {
+        if (isBridge[s][p]) { p++; continue; }
+        let end = p;
+        while (end < K && !isBridge[s][end]) end++;
+        const run = strips[s].decks.slice(p, end);
+        const chosen = runOptions(run.length).find(
+          (o) => o.three <= avail.three && o.two <= avail.two && o.one <= avail.one,
+        );
+        if (!chosen) {
+          holderError = `Not enough holders left for a run of ${run.length} decks.`;
+          p = end;
+          continue;
+        }
+        avail.three -= chosen.three;
+        avail.two -= chosen.two;
+        avail.one -= chosen.one;
+        singles += chosen.one;
+        const sizes: (1 | 2 | 3)[] = [];
+        for (let i = 0; i < chosen.three; i++) sizes.push(3);
+        for (let i = 0; i < chosen.two; i++) sizes.push(2);
+        for (let i = 0; i < chosen.one; i++) sizes.push(1);
+        let c = 0;
+        for (const size of sizes) {
+          const group = run.slice(c, c + size);
+          const ph: PH = { decks: group, axis: strips[s].axis, label: "" };
+          phs.push(ph);
+          for (const d of group) cellHolder.set(`${d.x},${d.y}`, ph);
+          c += size;
+        }
+        p = end;
+      }
+    }
+
+    // ---- materialise holders (labelled top-left first) ----
+    const holders: Holder[] = [];
+    const phOut = new Map<PH, Holder>();
+    const ordered = [...phs].sort((p, q) => {
+      const py = Math.min(...p.decks.map((d) => d.y));
+      const qy = Math.min(...q.decks.map((d) => d.y));
+      const px = Math.min(...p.decks.map((d) => d.x));
+      const qx = Math.min(...q.decks.map((d) => d.x));
+      return (py - qy) || (px - qx);
+    });
     let label = 1;
-    let bridgeLabel = 1;
-
-    const order = strips.map((_, i) => i).sort((p, q) => strips[q].decks.length - strips[p].decks.length);
-
-    // Internal, mutable holder representation so decks can be promoted to bridges.
-    type PH = { decks: Deck[]; axis: "x" | "y"; out?: Holder };
-    type PB = { deck: Deck; left: PH; right: PH };
-    const stripHolders: PH[][] = strips.map(() => []);
-    const pendingBridges: PB[] = [];
-
-    for (const idx of order) {
-      const s = strips[idx];
-      const split = splitStrip(s.decks.length, avail);
-      if (!split) {
-        holderError = `Not enough holders left for a strip of ${s.decks.length} decks.`;
-        continue;
-      }
-      avail.one -= split.used.one;
-      avail.two -= split.used.two;
-      avail.three -= split.used.three;
-
-      let cursor = 0;
-      let lastHolder: PH | null = null;
-      let pendingBridgeDeck: Deck | null = null;
-      for (const item of split.items) {
-        if (item.kind === "holder") {
-          const ph: PH = { decks: s.decks.slice(cursor, cursor + item.size), axis: s.axis };
-          stripHolders[idx].push(ph);
-          if (pendingBridgeDeck && lastHolder) {
-            pendingBridges.push({ deck: pendingBridgeDeck, left: lastHolder, right: ph });
-            pendingBridgeDeck = null;
-          }
-          lastHolder = ph;
-          cursor += item.size;
-        } else {
-          const deck = s.decks[cursor];
-          deck.isBridge = true;
-          pendingBridgeDeck = deck;
-          cursor += 1;
-        }
-      }
-    }
-
-    // ---- Promote decks to bridges wherever a holder isn't needed ----
-    // A deck that sits between two holder-supported decks in the neighbouring
-    // strips can be carried as a bridge, so we shrink its holder and free it.
-    const keyOf = (d: Deck) => `${d.x},${d.y}`;
-    const support = new Map<string, PH>();
-    for (const list of stripHolders) for (const ph of list) for (const d of ph.decks) support.set(keyOf(d), ph);
-    const locked = new Set<string>();
-    for (const pb of pendingBridges) {
-      for (const d of [...pb.left.decks, ...pb.right.decks]) locked.add(keyOf(d));
-    }
-
-    const sizeKey = (n: number) => (n === 1 ? "one" : n === 2 ? "two" : "three") as "one" | "two" | "three";
-
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const list of stripHolders) {
-        for (const ph of list) {
-          if (ph.decks.length === 0) continue;
-          for (const edge of [0, ph.decks.length - 1]) {
-            if (ph.decks.length === 0) break;
-            const deck = ph.decks[edge === 0 ? 0 : ph.decks.length - 1];
-            if (!deck || locked.has(keyOf(deck))) continue;
-            // perpendicular neighbours (the strips on either side)
-            const n1 = ph.axis === "x" ? { x: deck.x, y: deck.y - 8 } : { x: deck.x - 8, y: deck.y };
-            const n2 = ph.axis === "x" ? { x: deck.x, y: deck.y + 8 } : { x: deck.x + 8, y: deck.y };
-            const s1 = support.get(`${n1.x},${n1.y}`);
-            const s2 = support.get(`${n2.x},${n2.y}`);
-            if (!s1 || !s2 || s1 === ph || s2 === ph) continue;
-            const newSize = ph.decks.length - 1;
-            // inventory: give back the current holder, take the smaller one
-            if (newSize > 0 && avail[sizeKey(newSize)] <= 0) continue;
-            avail[sizeKey(ph.decks.length)] += 1;
-            if (newSize > 0) avail[sizeKey(newSize)] -= 1;
-            ph.decks = edge === 0 ? ph.decks.slice(1) : ph.decks.slice(0, -1);
-            deck.isBridge = true;
-            support.delete(keyOf(deck));
-            pendingBridges.push({ deck, left: s1, right: s2 });
-            for (const d of [...s1.decks, ...s2.decks]) locked.add(keyOf(d));
-            changed = true;
-          }
-        }
-      }
-    }
-
-    // ---- Materialise holders and bridges ----
-    const live: PH[] = [];
-    for (const list of stripHolders) for (const ph of list) if (ph.decks.length > 0) live.push(ph);
-    for (const ph of live) {
-      const xs = ph.decks.map((d) => d.x);
-      const ys = ph.decks.map((d) => d.y);
+    for (const ph of ordered) {
       const size = ph.decks.length as 1 | 2 | 3;
-      ph.out = {
-        x: Math.min(...xs),
-        y: Math.min(...ys),
+      const h: Holder = {
+        x: Math.min(...ph.decks.map((d) => d.x)),
+        y: Math.min(...ph.decks.map((d) => d.y)),
         w: ph.axis === "x" ? size * 4 : 8,
         h: ph.axis === "y" ? size * 4 : 8,
         capacity: size,
-        label: "",
+        label: `H${label++}`,
       };
-    }
-    const sorted = live
-      .map((ph) => ph.out!)
-      .sort((p, q) => (p.y - q.y) || (p.x - q.x));
-    sorted.forEach((h) => {
-      h.label = `H${label++}`;
+      phOut.set(ph, h);
       holders.push(h);
-    });
+    }
 
-    for (const pb of pendingBridges) {
-      const l = pb.left.out;
-      const r = pb.right.out;
-      if (!l || !r) continue;
-      bridges.push({
-        x: pb.deck.x,
-        y: pb.deck.y,
-        w: pb.deck.w,
-        h: pb.deck.h,
-        label: "",
-        between: [l.label, r.label],
-      });
+    // ---- materialise bridges ----
+    const bridges: Bridge[] = [];
+    for (let s = 0; s < S; s++) {
+      for (let p = 0; p < K; p++) {
+        if (!isBridge[s][p]) continue;
+        const deck = strips[s].decks[p];
+        deck.isBridge = true;
+        const nbrs =
+          supportedBy[s][p] === "cross"
+            ? [strips[s - 1].decks[p], strips[s + 1].decks[p]]
+            : [strips[s].decks[p - 1], strips[s].decks[p + 1]];
+        const l = nbrs[0] && cellHolder.get(`${nbrs[0].x},${nbrs[0].y}`);
+        const r = nbrs[1] && cellHolder.get(`${nbrs[1].x},${nbrs[1].y}`);
+        const lo = l ? phOut.get(l) : undefined;
+        const ro = r ? phOut.get(r) : undefined;
+        if (!lo || !ro) return null;
+        bridges.push({
+          x: deck.x,
+          y: deck.y,
+          w: deck.w,
+          h: deck.h,
+          label: "",
+          between: [lo.label, ro.label],
+        });
+      }
     }
     bridges.sort((p, q) => (p.y - q.y) || (p.x - q.x));
-    bridges.forEach((br) => {
-      br.label = `B${bridgeLabel++}`;
+    bridges.forEach((br, i) => {
+      br.label = `B${i + 1}`;
     });
-    for (const d of decks) d.isBridge = bridges.some((br) => br.x === d.x && br.y === d.y);
 
     return {
       decks,
@@ -355,15 +318,25 @@ function planStage(widthFt: number, lengthFt: number): Result {
       holderError,
       totalHolders: holders.length,
       totalBridges: bridges.length,
+      singles,
     };
   }
 
+  const patterns: Pattern[] = [];
+  for (const crossOffset of [1, 2, null]) {
+    for (const inOffset of [1, 2, null]) {
+      patterns.push({ crossOffset, inOffset });
+    }
+  }
 
   const attempts: Attempt[] = [];
   for (const o of ["horizontal", "vertical"] as const) {
-    const r = buildOrientation(o);
-    if (r) attempts.push(r);
+    for (const pattern of patterns) {
+      const r = buildOrientation(o, pattern);
+      if (r) attempts.push(r);
+    }
   }
+
   if (attempts.length === 0) {
     return { ok: false, reason: "Could not build this stage with available holders." };
   }
