@@ -325,7 +325,7 @@ function Index() {
   const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
 
   const [view, setView] = useState<"top" | "side" | "both">("both");
-  const [showConnectors, setShowConnectors] = useState(true);
+
 
   const result = useMemo(() => planStage(width, length), [width, length]);
   const totalArea = width * length;
@@ -335,11 +335,6 @@ function Index() {
   const canvasW = width * scale;
   const canvasH = length * scale;
 
-  const connectors = useMemo<Connector[]>(
-    () => (result.ok ? computeConnectors(result.decks, result.holders, result.bridges) : []),
-    [result],
-  );
-  const connectorPx = Math.max(18, Math.min(40, scale * 0.9));
 
 
 
@@ -479,18 +474,6 @@ function Index() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  id="show-connectors"
-                  type="checkbox"
-                  checked={showConnectors}
-                  onChange={(e) => setShowConnectors(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
-                />
-                <label htmlFor="show-connectors" className="text-sm font-medium">
-                  Show connectors
-                </label>
-              </div>
 
               <div className="rounded-md bg-muted p-3 text-sm">
                 <div className="flex justify-between py-0.5">
@@ -544,7 +527,6 @@ function Index() {
                           <div>{totals.two}× 2-deck holder (8&#39;×8&#39;)</div>
                           <div>{totals.one}× 1-deck holder (4&#39;×8&#39;)</div>
                           <div>{result.bridges.length}× bridge deck (4&#39;×8&#39;)</div>
-                          <div>{connectors.length}× pin connector</div>
                         </div>
                         {result.holderError && (
                           <div className="mt-1 text-xs font-medium text-destructive">
@@ -647,52 +629,10 @@ function Index() {
                           </span>
                         </div>
                       ))}
-                      {showConnectors &&
-                        connectors.map((c) => (
-                          <div
-                            key={c.label}
-                            className="pointer-events-none absolute flex flex-col items-center"
-                            style={{
-                              left: c.x * scale - connectorPx / 2,
-                              top: c.y * scale - connectorPx / 2,
-                              width: connectorPx,
-                              height: connectorPx + 14,
-                            }}
-                            title={`${c.label}: ${c.ways}-way pin connector, ${c.rotation}° — joins ${c.joins.join(", ")}`}
-                          >
-                            <ConnectorIcon connector={c} size={connectorPx} />
-                            <span className="mt-0.5 text-[9px] font-bold leading-none text-foreground">
-                              {c.rotation}°
-                            </span>
-                          </div>
-                        ))}
                     </div>
                   </div>
 
-                  {showConnectors && (
-                    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/40 p-3">
-                      <img
-                        src={connectorPhoto.url}
-                        alt="SICO VMP 4-way pin connector on a frame corner post"
-                        className="h-20 w-20 rounded-md border border-border object-cover"
-                        loading="lazy"
-                      />
-                      <div className="text-xs text-muted-foreground">
-                        <div className="font-semibold text-foreground">Pin connector</div>
-                        <p className="mt-0.5 max-w-md">
-                          Drops onto each frame corner post; the tapered pins seat the deck corners
-                          and lock adjacent decks together. The number on each symbol is how many
-                          decks it seats — 2-way at a stage edge, 3-way along a run, 4-way where four
-                          decks meet. The{" "}
-                          <span className="font-semibold" style={{ color: CONNECTOR_TAB }}>
-                            yellow tab
-                          </span>{" "}
-                          is the reference face: install every connector with the tab toward the
-                          stage front (top of this drawing).
-                        </p>
-                      </div>
-                    </div>
-                  )}
+
 
                   <p className="mt-3 text-xs text-muted-foreground">
                     Scale: 1 ft ≈ {scale.toFixed(1)} px. Origin (0,0) is top-left.
@@ -894,45 +834,6 @@ function Index() {
               </div>
             )}
 
-            {result.ok && connectors.length > 0 && (
-              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-                <div className="mb-3 text-sm font-semibold">Pin connector placement</div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="text-muted-foreground">
-                      <tr className="border-b border-border">
-                        <th className="py-2 pr-3">Connector</th>
-                        <th className="py-2 pr-3">Position (x, y) ft</th>
-                        <th className="py-2 pr-3">Way count</th>
-                        <th className="py-2 pr-3">Rotation</th>
-                        <th className="py-2 pr-3">Mounted on (black)</th>
-                        <th className="py-2 pr-3">Joins</th>
-
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {connectors.map((c) => (
-                        <tr key={c.label} className="border-b border-border/60 last:border-0">
-                          <td className="py-2 pr-3 font-semibold">
-                            <span
-                              className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle"
-                              style={{ background: CONNECTOR_TAB }}
-                            />
-                            {c.label}
-                          </td>
-                          <td className="py-2 pr-3">({c.x}, {c.y})</td>
-                          <td className="py-2 pr-3">{c.ways}-way</td>
-                          <td className="py-2 pr-3">{c.rotation}°</td>
-                          <td className="py-2 pr-3">{c.host}</td>
-                          <td className="py-2 pr-3">{c.joins.join(", ")}</td>
-
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
