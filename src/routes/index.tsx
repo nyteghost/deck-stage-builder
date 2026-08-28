@@ -325,7 +325,7 @@ function Index() {
   const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
 
   const [view, setView] = useState<"top" | "side" | "both">("both");
-  const [showConnectors, setShowConnectors] = useState(true);
+
 
   const result = useMemo(() => planStage(width, length), [width, length]);
   const totalArea = width * length;
@@ -335,11 +335,6 @@ function Index() {
   const canvasW = width * scale;
   const canvasH = length * scale;
 
-  const connectors = useMemo<Connector[]>(
-    () => (result.ok ? computeConnectors(result.decks, result.holders, result.bridges) : []),
-    [result],
-  );
-  const connectorPx = Math.max(18, Math.min(40, scale * 0.9));
 
 
 
