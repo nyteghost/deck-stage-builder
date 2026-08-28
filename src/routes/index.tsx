@@ -834,45 +834,6 @@ function Index() {
               </div>
             )}
 
-            {result.ok && connectors.length > 0 && (
-              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-                <div className="mb-3 text-sm font-semibold">Pin connector placement</div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="text-muted-foreground">
-                      <tr className="border-b border-border">
-                        <th className="py-2 pr-3">Connector</th>
-                        <th className="py-2 pr-3">Position (x, y) ft</th>
-                        <th className="py-2 pr-3">Way count</th>
-                        <th className="py-2 pr-3">Rotation</th>
-                        <th className="py-2 pr-3">Mounted on (black)</th>
-                        <th className="py-2 pr-3">Joins</th>
-
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {connectors.map((c) => (
-                        <tr key={c.label} className="border-b border-border/60 last:border-0">
-                          <td className="py-2 pr-3 font-semibold">
-                            <span
-                              className="mr-2 inline-block h-2.5 w-2.5 rounded-full align-middle"
-                              style={{ background: CONNECTOR_TAB }}
-                            />
-                            {c.label}
-                          </td>
-                          <td className="py-2 pr-3">({c.x}, {c.y})</td>
-                          <td className="py-2 pr-3">{c.ways}-way</td>
-                          <td className="py-2 pr-3">{c.rotation}°</td>
-                          <td className="py-2 pr-3">{c.host}</td>
-                          <td className="py-2 pr-3">{c.joins.join(", ")}</td>
-
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
