@@ -396,8 +396,23 @@ function StagePanel({
   const [view, setView] = useState<"top" | "side" | "both">("both");
 
 
-  const result = useMemo(() => planStage(width, length), [width, length]);
+  const result = useMemo(() => planStage(width, length, stock), [width, length, stock]);
   const totalArea = width * length;
+
+  const usage = useMemo<Stock>(() => {
+    if (!result.ok) return { decks: 0, one: 0, two: 0, three: 0 };
+    const u = { decks: result.decks.length, one: 0, two: 0, three: 0 };
+    for (const h of result.holders) {
+      if (h.capacity === 1) u.one++;
+      if (h.capacity === 2) u.two++;
+      if (h.capacity === 3) u.three++;
+    }
+    return u;
+  }, [result]);
+
+  useEffect(() => {
+    onUsage?.(usage);
+  }, [usage, onUsage]);
 
   const maxPx = 560;
   const scale = Math.min(maxPx / Math.max(width, 1), maxPx / Math.max(length, 1), 32);
