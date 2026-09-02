@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 
 
@@ -96,7 +96,16 @@ function runOptions(r: number): { three: number; two: number; one: number }[] {
   return opts;
 }
 
-function planStage(widthFt: number, lengthFt: number): Result {
+type Stock = { decks: number; one: number; two: number; three: number };
+
+const FULL_STOCK: Stock = {
+  decks: INVENTORY.totalDecks,
+  one: INVENTORY.holders.one.count,
+  two: INVENTORY.holders.two.count,
+  three: INVENTORY.holders.three.count,
+};
+
+function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK): Result {
   if (widthFt <= 0 || lengthFt <= 0) {
     return { ok: false, reason: "Enter a width and length greater than zero." };
   }
@@ -210,9 +219,9 @@ function planStage(widthFt: number, lengthFt: number): Result {
 
     // ---- lay holders over the remaining runs ----
     const avail = {
-      one: INVENTORY.holders.one.count,
-      two: INVENTORY.holders.two.count,
-      three: INVENTORY.holders.three.count,
+      one: stock.one,
+      two: stock.two,
+      three: stock.three,
     };
     type PH = { decks: Deck[]; axis: "x" | "y"; label: string };
     const cellHolder = new Map<string, PH>();
@@ -367,11 +376,15 @@ function StagePanel({
   title,
   defaultWidth,
   defaultLength,
+  stock = FULL_STOCK,
+  onUsage,
 }: {
   title: string;
   defaultWidth: number;
   defaultLength: number;
   labelPrefix?: string;
+  stock?: Stock;
+  onUsage?: (u: Stock) => void;
 }) {
   const [width, setWidth] = useState(defaultWidth);
   const [length, setLength] = useState(defaultLength);
@@ -383,8 +396,23 @@ function StagePanel({
   const [view, setView] = useState<"top" | "side" | "both">("both");
 
 
-  const result = useMemo(() => planStage(width, length), [width, length]);
+  const result = useMemo(() => planStage(width, length, stock), [width, length, stock]);
   const totalArea = width * length;
+
+  const usage = useMemo<Stock>(() => {
+    if (!result.ok) return { decks: 0, one: 0, two: 0, three: 0 };
+    const u = { decks: result.decks.length, one: 0, two: 0, three: 0 };
+    for (const h of result.holders) {
+      if (h.capacity === 1) u.one++;
+      if (h.capacity === 2) u.two++;
+      if (h.capacity === 3) u.three++;
+    }
+    return u;
+  }, [result]);
+
+  useEffect(() => {
+    onUsage?.(usage);
+  }, [usage, onUsage]);
 
   const maxPx = 560;
   const scale = Math.min(maxPx / Math.max(width, 1), maxPx / Math.max(length, 1), 32);
@@ -547,7 +575,7 @@ function StagePanel({
                 {result.ok ? (
                   (() => {
                     const count = result.decks.length;
-                    const overDecks = count > INVENTORY.totalDecks;
+                    const overDecks = count > stock.decks;
                     const totals = result.holders.reduce(
                       (acc, h) => {
                         if (h.capacity === 1) acc.one++;
@@ -568,7 +596,7 @@ function StagePanel({
                         <div className="mt-2 flex justify-between border-t border-border pt-2">
                           <span className="text-muted-foreground">Decks required</span>
                           <span className={`font-semibold ${overDecks ? "text-destructive" : ""}`}>
-                            {count} / {INVENTORY.totalDecks}
+                            {count} / {stock.decks}
                           </span>
                         </div>
                         <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
@@ -584,7 +612,7 @@ function StagePanel({
                         )}
                         {overDecks && (
                           <div className="mt-1 text-xs font-medium text-destructive">
-                            Exceeds your 72-deck inventory by {count - INVENTORY.totalDecks}.
+                            Exceeds the {stock.decks} decks available to this stage by {count - stock.decks}.
                           </div>
                         )}
                       </>
