@@ -219,9 +219,9 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
 
     // ---- lay holders over the remaining runs ----
     const avail = {
-      one: INVENTORY.holders.one.count,
-      two: INVENTORY.holders.two.count,
-      three: INVENTORY.holders.three.count,
+      one: stock.one,
+      two: stock.two,
+      three: stock.three,
     };
     type PH = { decks: Deck[]; axis: "x" | "y"; label: string };
     const cellHolder = new Map<string, PH>();
