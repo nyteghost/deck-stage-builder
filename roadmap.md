@@ -1,0 +1,2 @@
+- [x] Use bridges wherever a holder isn't needed (global pattern optimizer)
+- [ ] Tickable second stage with its own width/length/height

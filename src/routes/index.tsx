@@ -411,15 +411,8 @@ function Index() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-5xl px-4 py-10">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck (4&#39;×8&#39;) + 8×2-deck (8&#39;×8&#39;) + 8×3-deck (12&#39;×8&#39;) holders.
-            A <span className="font-medium" style={{ color: BRIDGE_COLOR }}>bridge</span> is a single deck spanning between two holders — adds coverage without using another holder.
-          </p>
-        </header>
+      <div className="mb-10">
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">{title}</h2>
 
         <div className="grid gap-6 md:grid-cols-[280px_1fr]">
           <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
@@ -881,6 +874,39 @@ function Index() {
 
           </div>
         </div>
+      </div>
+  );
+}
+
+function Index() {
+  const [showSecond, setShowSecond] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-5xl px-4 py-10">
+        <header className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck (4&#39;×8&#39;) + 8×2-deck (8&#39;×8&#39;) + 8×3-deck (12&#39;×8&#39;) holders.
+            A <span className="font-medium" style={{ color: BRIDGE_COLOR }}>bridge</span> is a single deck spanning between two holders — adds coverage without using another holder.
+          </p>
+        </header>
+
+        <label className="mb-6 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
+          <input
+            type="checkbox"
+            checked={showSecond}
+            onChange={(e) => setShowSecond(e.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          <span className="font-medium">Add a second stage</span>
+          <span className="text-xs text-muted-foreground">(its own width, length &amp; height)</span>
+        </label>
+
+        <StagePanel title={showSecond ? "Stage 1" : "Stage"} defaultWidth={24} defaultLength={16} />
+        {showSecond && (
+          <StagePanel title="Stage 2" defaultWidth={16} defaultLength={8} labelPrefix="S2-" />
+        )}
       </div>
     </div>
   );
