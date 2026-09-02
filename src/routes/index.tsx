@@ -363,10 +363,21 @@ function planStage(widthFt: number, lengthFt: number): Result {
 }
 
 
-function Index() {
-  const [width, setWidth] = useState(24);
-  const [length, setLength] = useState(16);
+function StagePanel({
+  title,
+  defaultWidth,
+  defaultLength,
+}: {
+  title: string;
+  defaultWidth: number;
+  defaultLength: number;
+  labelPrefix?: string;
+}) {
+  const [width, setWidth] = useState(defaultWidth);
+  const [length, setLength] = useState(defaultLength);
   const [heightIn, setHeightIn] = useState(MIN_HEIGHT_IN);
+  const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
+
   const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
 
   const [view, setView] = useState<"top" | "side" | "both">("both");
