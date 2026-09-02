@@ -96,7 +96,16 @@ function runOptions(r: number): { three: number; two: number; one: number }[] {
   return opts;
 }
 
-function planStage(widthFt: number, lengthFt: number): Result {
+type Stock = { decks: number; one: number; two: number; three: number };
+
+const FULL_STOCK: Stock = {
+  decks: INVENTORY.totalDecks,
+  one: INVENTORY.holders.one.count,
+  two: INVENTORY.holders.two.count,
+  three: INVENTORY.holders.three.count,
+};
+
+function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK): Result {
   if (widthFt <= 0 || lengthFt <= 0) {
     return { ok: false, reason: "Enter a width and length greater than zero." };
   }
