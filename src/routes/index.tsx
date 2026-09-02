@@ -378,7 +378,7 @@ function StagePanel({
   const [heightIn, setHeightIn] = useState(MIN_HEIGHT_IN);
   const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
 
-  const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
+
 
   const [view, setView] = useState<"top" | "side" | "both">("both");
 
