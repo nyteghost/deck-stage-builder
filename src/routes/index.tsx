@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 
 
@@ -575,7 +575,7 @@ function StagePanel({
                 {result.ok ? (
                   (() => {
                     const count = result.decks.length;
-                    const overDecks = count > INVENTORY.totalDecks;
+                    const overDecks = count > stock.decks;
                     const totals = result.holders.reduce(
                       (acc, h) => {
                         if (h.capacity === 1) acc.one++;
@@ -596,7 +596,7 @@ function StagePanel({
                         <div className="mt-2 flex justify-between border-t border-border pt-2">
                           <span className="text-muted-foreground">Decks required</span>
                           <span className={`font-semibold ${overDecks ? "text-destructive" : ""}`}>
-                            {count} / {INVENTORY.totalDecks}
+                            {count} / {stock.decks}
                           </span>
                         </div>
                         <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
@@ -612,7 +612,7 @@ function StagePanel({
                         )}
                         {overDecks && (
                           <div className="mt-1 text-xs font-medium text-destructive">
-                            Exceeds your 72-deck inventory by {count - INVENTORY.totalDecks}.
+                            Exceeds the {stock.decks} decks available to this stage by {count - stock.decks}.
                           </div>
                         )}
                       </>
