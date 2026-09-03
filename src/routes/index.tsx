@@ -954,9 +954,31 @@ function Index() {
           <span className="text-xs text-muted-foreground">(its own width, length &amp; height)</span>
         </label>
 
-        <StagePanel title={showSecond ? "Stage 1" : "Stage"} defaultWidth={24} defaultLength={16} />
+        <StagePanel
+          title={showSecond ? "Stage 1" : "Stage"}
+          defaultWidth={24}
+          defaultLength={16}
+          onUsage={setUsed1}
+        />
         {showSecond && (
-          <StagePanel title="Stage 2" defaultWidth={16} defaultLength={8} labelPrefix="S2-" />
+          <>
+            <div className="mb-4 rounded-md border border-border bg-muted p-3 text-sm">
+              <div className="font-semibold">Left for Stage 2 after Stage 1</div>
+              <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
+                <div>{remaining.decks} decks</div>
+                <div>{remaining.three}× 3-deck holder</div>
+                <div>{remaining.two}× 2-deck holder</div>
+                <div>{remaining.one}× 1-deck holder</div>
+              </div>
+            </div>
+            <StagePanel
+              title="Stage 2"
+              defaultWidth={16}
+              defaultLength={8}
+              labelPrefix="S2-"
+              stock={remaining}
+            />
+          </>
         )}
       </div>
     </div>
