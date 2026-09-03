@@ -142,3 +142,17 @@
     color: var(--color-foreground);
   }
 }
+
+@media print {
+  .no-print { display: none !important; }
+  .print-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .print-grid > * { break-inside: avoid; }
+  .print-stage { margin-bottom: 0 !important; }
+  .print-stage-body { display: flex !important; flex-direction: column-reverse !important; }
+  .print-stage-body > * { width: 100% !important; }
+}
