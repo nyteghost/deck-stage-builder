@@ -919,6 +919,18 @@ function StagePanel({
 
 function Index() {
   const [showSecond, setShowSecond] = useState(false);
+  const [used1, setUsed1] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+
+  const remaining = useMemo<Stock>(
+    () => ({
+      decks: Math.max(0, FULL_STOCK.decks - used1.decks),
+      one: Math.max(0, FULL_STOCK.one - used1.one),
+      two: Math.max(0, FULL_STOCK.two - used1.two),
+      three: Math.max(0, FULL_STOCK.three - used1.three),
+    }),
+    [used1],
+  );
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
