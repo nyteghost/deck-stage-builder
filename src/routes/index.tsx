@@ -654,8 +654,7 @@ function StagePanel({
           </div>
 
           <div className="space-y-6">
-            {(!result.ok || showTop) && (
-            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className={`rounded-lg border border-border bg-card p-5 shadow-sm ${!result.ok || showTop ? "" : "print-only"}`}>
               {result.ok ? (
                 <>
                   <div className="mb-1 text-sm font-semibold">Top view (plan)</div>
@@ -728,7 +727,6 @@ function StagePanel({
                 </div>
               )}
             </div>
-            )}
 
             {result.ok && (
               <div className="print-only mt-3 text-xs">
@@ -989,7 +987,7 @@ function Index() {
         />
         {showSecond && (
           <div>
-            <div className="mb-4 rounded-md border border-border bg-muted p-3 text-sm">
+            <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
               <div className="font-semibold">Left for Stage 2 after Stage 1</div>
               <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
                 <div>{remaining.decks} decks</div>
