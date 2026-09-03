@@ -728,20 +728,8 @@ function StagePanel({
               )}
             </div>
 
-            {result.ok && (
-              <div className="print-only mt-3 text-xs">
-                <div className="mb-1 text-sm font-semibold">
-                  {title} — {width} ft × {length} ft, {heightIn}&quot; high
-                </div>
-                <div>Decks needed: {result.decks.length} (incl. {result.bridges.length} bridge deck{result.bridges.length === 1 ? "" : "s"})</div>
-                <div>
-                  Holders needed: {result.holders.length} total —{" "}
-                  {result.holders.filter((h) => h.capacity === 3).length}× 3-deck (12&#39;×8&#39;),{" "}
-                  {result.holders.filter((h) => h.capacity === 2).length}× 2-deck (8&#39;×8&#39;),{" "}
-                  {result.holders.filter((h) => h.capacity === 1).length}× 1-deck (4&#39;×8&#39;)
-                </div>
-              </div>
-            )}
+
+
 
 
             {result.ok && showSide && (
@@ -850,7 +838,7 @@ function StagePanel({
 
 
             {result.ok && result.holders.length > 0 && (
-              <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
+              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
                 <div className="mb-3 text-sm font-semibold">Holder placement</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
@@ -890,7 +878,7 @@ function StagePanel({
             )}
 
             {result.ok && result.bridges.length > 0 && (
-              <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
+              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
                 <div className="mb-3 text-sm font-semibold">Bridge placement</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">

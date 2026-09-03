@@ -160,4 +160,9 @@
   .print-only { display: block !important; }
   .print-stage-body { display: block !important; }
   .print-stage-body > * { width: 100% !important; }
+  .print-stage .overflow-auto,
+  .print-stage .overflow-x-auto { overflow: visible !important; }
+  .print-stage table { font-size: 9px; }
+  .print-stage .shadow-sm { box-shadow: none !important; }
 }
+
