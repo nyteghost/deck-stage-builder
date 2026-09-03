@@ -452,10 +452,10 @@ function StagePanel({
 
 
   return (
-      <div className="mb-10">
+      <div className="print-stage mb-10">
         <h2 className="mb-3 text-lg font-semibold tracking-tight">{title}</h2>
 
-        <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+        <div className="print-stage-body grid gap-6 md:grid-cols-[280px_1fr]">
           <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
             <div className="space-y-4">
               <div>
@@ -972,7 +972,7 @@ function Index() {
           onUsage={setUsed1}
         />
         {showSecond && (
-          <>
+          <div>
             <div className="mb-4 rounded-md border border-border bg-muted p-3 text-sm">
               <div className="font-semibold">Left for Stage 2 after Stage 1</div>
               <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
@@ -989,7 +989,7 @@ function Index() {
               labelPrefix="S2-"
               stock={remaining}
             />
-          </>
+          </div>
         )}
         </div>
       </div>

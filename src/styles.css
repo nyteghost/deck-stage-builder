@@ -147,12 +147,12 @@
   .no-print { display: none !important; }
   .print-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
     gap: 16px;
     align-items: start;
   }
   .print-grid > * { break-inside: avoid; }
   .print-stage { margin-bottom: 0 !important; }
-  .print-stage-body { display: block !important; }
+  .print-stage-body { display: flex !important; flex-direction: column-reverse !important; }
   .print-stage-body > * { width: 100% !important; }
 }
