@@ -438,12 +438,14 @@ function StagePanel({
   }, [result]);
 
   const legCount = elevation.filter((s) => s.kind === "holder").length * 2;
-  const surfaceTotalIn = heightIn + DECK_THICKNESS_IN;
+  // The stage height entered IS the finished walking-surface height.
+  const surfaceTotalIn = heightIn;
+  const legHeightIn = Math.max(heightIn - DECK_THICKNESS_IN, 0);
 
   // Vertical scale for the elevation: inches → px (kept readable for short heights).
   const vScale = Math.min(Math.max(220 / Math.max(surfaceTotalIn, 1), 2), 8);
   const deckPx = Math.max(DECK_THICKNESS_IN * vScale, 6);
-  const legPx = Math.max(heightIn * vScale, 0);
+  const legPx = Math.max(legHeightIn * vScale, 0);
   const sideH = deckPx + legPx;
   const showTop = view === "top" || view === "both";
   const showSide = view === "side" || view === "both";
@@ -562,8 +564,8 @@ function StagePanel({
                   <span className="font-medium">{heightIn}&quot;</span>
                 </div>
                 <div className="flex justify-between py-0.5">
-                  <span className="text-muted-foreground">Surface height</span>
-                  <span className="font-medium">{surfaceTotalIn}&quot; (incl. {DECK_THICKNESS_IN}&quot; deck)</span>
+                  <span className="text-muted-foreground">Leg height</span>
+                  <span className="font-medium">{legHeightIn}&quot; (+ {DECK_THICKNESS_IN}&quot; deck)</span>
                 </div>
                 {result.ok && (
                   <div className="flex justify-between py-0.5">
@@ -732,9 +734,9 @@ function StagePanel({
               <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
                 <div className="mb-1 text-sm font-semibold">Side view (elevation)</div>
                 <div className="mb-3 text-xs text-muted-foreground">
-                  Looking at the front edge ({width} ft across). Deck surface sits {heightIn}&quot; off
-                  the floor; slab is {DECK_THICKNESS_IN}&quot; thick, so the walking surface is{" "}
-                  {surfaceTotalIn}&quot; total. Yellow sections are bridges — no leg beneath them.
+                  Looking at the front edge ({width} ft across). The walking surface sits{" "}
+                  {heightIn}&quot; off the floor: {DECK_THICKNESS_IN}&quot; deck slab on{" "}
+                  {legHeightIn}&quot; legs. Yellow sections are bridges — no leg beneath them.
                 </div>
                 <div className="overflow-auto pb-2">
                   <div className="flex items-end gap-3">
@@ -754,7 +756,7 @@ function StagePanel({
                         className="absolute right-1 whitespace-nowrap"
                         style={{ top: deckPx + legPx / 2 - 6 }}
                       >
-                        {heightIn}&quot; legs
+                        {legHeightIn}&quot; legs
                       </div>
                     </div>
 
