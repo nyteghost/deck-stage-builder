@@ -143,6 +143,9 @@
   }
 }
 
+/* print-only blocks are hidden on screen */
+.print-only { display: none; }
+
 @media print {
   .no-print { display: none !important; }
   .print-grid {
@@ -153,6 +156,8 @@
   }
   .print-grid > * { break-inside: avoid; }
   .print-stage { margin-bottom: 0 !important; }
-  .print-stage-body { display: flex !important; flex-direction: column-reverse !important; }
+  .print-hide { display: none !important; }
+  .print-only { display: block !important; }
+  .print-stage-body { display: block !important; }
   .print-stage-body > * { width: 100% !important; }
 }
