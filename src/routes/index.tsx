@@ -956,6 +956,15 @@ function Index() {
           <span className="text-xs text-muted-foreground">(its own width, length &amp; height)</span>
         </label>
 
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="no-print mb-6 ml-3 rounded-md border border-border bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90"
+        >
+          Print stages side by side
+        </button>
+
+        <div className="print-grid">
         <StagePanel
           title={showSecond ? "Stage 1" : "Stage"}
           defaultWidth={24}
@@ -982,6 +991,7 @@ function Index() {
             />
           </>
         )}
+        </div>
       </div>
     </div>
   );
