@@ -838,7 +838,7 @@ function StagePanel({
 
 
             {result.ok && result.holders.length > 0 && (
-              <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
+              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
                 <div className="mb-3 text-sm font-semibold">Holder placement</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
@@ -878,7 +878,7 @@ function StagePanel({
             )}
 
             {result.ok && result.bridges.length > 0 && (
-              <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
+              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
                 <div className="mb-3 text-sm font-semibold">Bridge placement</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
