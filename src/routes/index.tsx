@@ -414,7 +414,7 @@ function StagePanel({
     onUsage?.(usage);
   }, [usage, onUsage]);
 
-  const maxPx = 560;
+  const maxPx = 480;
   const scale = Math.min(maxPx / Math.max(width, 1), maxPx / Math.max(length, 1), 32);
   const canvasW = width * scale;
   const canvasH = length * scale;
