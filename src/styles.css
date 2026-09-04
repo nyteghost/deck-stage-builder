@@ -162,6 +162,15 @@
   .print-stage-body > * { width: 100% !important; }
   .print-stage .overflow-auto,
   .print-stage .overflow-x-auto { overflow: visible !important; }
+  .print-stage .stage-diagram-wrapper {
+    overflow: hidden !important;
+    width: 100% !important;
+    height: calc(var(--diagram-h, 560px) * 0.6) !important;
+  }
+  .print-stage .stage-diagram {
+    transform: scale(0.6);
+    transform-origin: top left;
+  }
   .print-stage table { font-size: 9px; }
   .print-stage .shadow-sm { box-shadow: none !important; }
 }
