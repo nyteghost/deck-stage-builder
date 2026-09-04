@@ -662,9 +662,12 @@ function StagePanel({
                     Each thin rectangle is one 4&#39;×8&#39; deck. Coloured outlines show holders.
                   </div>
 
-                  <div className="overflow-auto">
+                  <div
+                    className="stage-diagram-wrapper overflow-auto"
+                    style={{ "--diagram-h": `${canvasH}px` } as React.CSSProperties}
+                  >
                     <div
-                      className="relative border border-border bg-muted/40"
+                      className="stage-diagram relative border border-border bg-muted/40"
                       style={{ width: canvasW || 1, height: canvasH || 1 }}
                     >
                       {result.decks.map((d, i) => (
