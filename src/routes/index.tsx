@@ -996,7 +996,10 @@ function Index() {
 
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={() => {
+            setEventNameDraft(eventName);
+            setShowEventModal(true);
+          }}
           className="no-print mb-6 ml-3 rounded-md border border-border bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90"
         >
           Print stages side by side
