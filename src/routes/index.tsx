@@ -951,6 +951,9 @@ function StagePanel({
 function Index() {
   const [showSecond, setShowSecond] = useState(false);
   const [used1, setUsed1] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [eventName, setEventName] = useState("");
+  const [eventNameDraft, setEventNameDraft] = useState("");
+  const [showEventModal, setShowEventModal] = useState(false);
 
   const remaining = useMemo<Stock>(
     () => ({
@@ -966,13 +969,19 @@ function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-5xl px-4 py-10">
-        <header className="mb-6">
+        <header className="print-hide mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck (4&#39;×8&#39;) + 8×2-deck (8&#39;×8&#39;) + 8×3-deck (12&#39;×8&#39;) holders.
             A <span className="font-medium" style={{ color: BRIDGE_COLOR }}>bridge</span> is a single deck spanning between two holders — adds coverage without using another holder.
           </p>
         </header>
+
+        <div className="print-only mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {eventName.trim() || "Stage Deck Planner"}
+          </h1>
+        </div>
 
         <label className="mb-6 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
           <input
@@ -987,7 +996,10 @@ function Index() {
 
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={() => {
+            setEventNameDraft(eventName);
+            setShowEventModal(true);
+          }}
           className="no-print mb-6 ml-3 rounded-md border border-border bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90"
         >
           Print stages side by side
@@ -1021,6 +1033,52 @@ function Index() {
           </div>
         )}
         </div>
+
+        {showEventModal && (
+          <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-lg">
+              <div className="mb-4 text-lg font-semibold">Enter Event Name</div>
+              <input
+                type="text"
+                value={eventNameDraft}
+                onChange={(e) => setEventNameDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setEventName(eventNameDraft);
+                    setShowEventModal(false);
+                    setTimeout(() => window.print(), 0);
+                  }
+                  if (e.key === "Escape") {
+                    setShowEventModal(false);
+                  }
+                }}
+                placeholder="Event name"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-ring focus:ring-2"
+                autoFocus
+              />
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowEventModal(false)}
+                  className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEventName(eventNameDraft);
+                    setShowEventModal(false);
+                    setTimeout(() => window.print(), 0);
+                  }}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
