@@ -989,7 +989,7 @@ function Index() {
           </h1>
         </div>
 
-        <label className="mb-6 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
+        <label className="no-print mb-6 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
           <input
             type="checkbox"
             checked={showSecond}
