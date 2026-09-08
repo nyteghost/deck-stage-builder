@@ -723,6 +723,12 @@ function StagePanel({
                     <div className="print-only mt-4 rounded border border-border bg-card p-3 text-sm">
                       <div className="font-semibold">Stage summary</div>
                       <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <span>Width:</span>
+                        <span className="font-medium">{width}&#39;</span>
+                        <span>Length:</span>
+                        <span className="font-medium">{length}&#39;</span>
+                        <span>Height:</span>
+                        <span className="font-medium">{heightIn}&quot;</span>
                         <span>Total decks:</span>
                         <span className="font-medium">{result.decks.length}</span>
                         <span>Bridge decks:</span>
