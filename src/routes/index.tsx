@@ -977,11 +977,11 @@ function Index() {
           </p>
         </header>
 
-        {eventName && (
-          <div className="print-only mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">{eventName}</h1>
-          </div>
-        )}
+        <div className="print-only mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {eventName.trim() || "Stage Deck Planner"}
+          </h1>
+        </div>
 
         <label className="mb-6 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
           <input
