@@ -951,6 +951,9 @@ function StagePanel({
 function Index() {
   const [showSecond, setShowSecond] = useState(false);
   const [used1, setUsed1] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [eventName, setEventName] = useState("");
+  const [eventNameDraft, setEventNameDraft] = useState("");
+  const [showEventModal, setShowEventModal] = useState(false);
 
   const remaining = useMemo<Stock>(
     () => ({
