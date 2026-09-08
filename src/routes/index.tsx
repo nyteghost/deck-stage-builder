@@ -719,6 +719,30 @@ function StagePanel({
                     Scale: 1 ft ≈ {scale.toFixed(1)} px. Origin (0,0) is top-left.
                   </p>
 
+                  {result.ok && (
+                    <div className="print-only mt-4 rounded border border-border bg-card p-3 text-sm">
+                      <div className="font-semibold">Stage summary</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <span>Total decks:</span>
+                        <span className="font-medium">{result.decks.length}</span>
+                        <span>Bridge decks:</span>
+                        <span className="font-medium">{result.bridges.length}</span>
+                        <span>3-deck holders:</span>
+                        <span className="font-medium">
+                          {result.holders.filter((h) => h.capacity === 3).length}
+                        </span>
+                        <span>2-deck holders:</span>
+                        <span className="font-medium">
+                          {result.holders.filter((h) => h.capacity === 2).length}
+                        </span>
+                        <span>1-deck holders:</span>
+                        <span className="font-medium">
+                          {result.holders.filter((h) => h.capacity === 1).length}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                 </>
               ) : (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
