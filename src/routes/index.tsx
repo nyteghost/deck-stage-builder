@@ -454,7 +454,7 @@ function StagePanel({
 
   return (
       <div className="print-stage mb-10">
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">{title}</h2>
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">{displayTitle}</h2>
 
         <div className="print-stage-body grid gap-6 md:grid-cols-[280px_1fr]">
           <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
