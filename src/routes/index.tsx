@@ -454,11 +454,21 @@ function StagePanel({
 
   return (
       <div className="print-stage mb-10">
-        <h2 className="mb-3 text-lg font-semibold tracking-tight">{title}</h2>
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">{displayTitle}</h2>
 
         <div className="print-stage-body grid gap-6 md:grid-cols-[280px_1fr]">
           <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium">Stage name</label>
+                <input
+                  type="text"
+                  value={stageName}
+                  onChange={(e) => setStageName(e.target.value)}
+                  placeholder={title}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium">Width (ft)</label>
                 <input
@@ -722,7 +732,7 @@ function StagePanel({
 
                   {result.ok && (
                     <div className="print-only mt-4 rounded border border-border bg-card p-3 text-sm">
-                      <div className="font-semibold">Stage summary</div>
+                      <div className="font-semibold">{displayTitle} summary</div>
                       <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                         <span>Width:</span>
                         <span className="font-medium">{width}&#39;</span>
