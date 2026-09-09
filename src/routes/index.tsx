@@ -732,7 +732,7 @@ function StagePanel({
 
                   {result.ok && (
                     <div className="print-only mt-4 rounded border border-border bg-card p-3 text-sm">
-                      <div className="font-semibold">Stage summary</div>
+                      <div className="font-semibold">{displayTitle} summary</div>
                       <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                         <span>Width:</span>
                         <span className="font-medium">{width}&#39;</span>
