@@ -460,6 +460,16 @@ function StagePanel({
           <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
             <div className="space-y-4">
               <div>
+                <label className="block text-sm font-medium">Stage name</label>
+                <input
+                  type="text"
+                  value={stageName}
+                  onChange={(e) => setStageName(e.target.value)}
+                  placeholder={title}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium">Width (ft)</label>
                 <input
                   type="number"
