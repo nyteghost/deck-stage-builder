@@ -702,7 +702,7 @@ function StagePanel({
                       {result.holders.map((h, i) => (
                         <div
                           key={`h${i}`}
-                          className="pointer-events-none absolute flex items-start justify-start"
+                          className="pointer-events-none absolute flex flex-col items-start justify-start"
                           style={{
                             left: h.x * scale,
                             top: h.y * scale,
@@ -719,6 +719,14 @@ function StagePanel({
                           >
                             {h.label}
                           </span>
+                          <div className="flex w-full flex-1 flex-col items-center justify-center px-1 text-center leading-tight">
+                            <span className="text-[10px] font-semibold text-white drop-shadow">
+                              {h.capacity}-Deck Holder
+                            </span>
+                            <span className="text-[10px] text-white/90 drop-shadow">
+                              {h.w}×{h.h}
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>
