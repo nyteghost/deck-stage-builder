@@ -684,7 +684,7 @@ function StagePanel({
                       {result.decks.map((d, i) => (
                         <div
                           key={i}
-                          className={`absolute flex items-center justify-center border border-background/60 text-[10px] font-medium ${
+                          className={`deck-cell absolute flex items-center justify-center border border-background/60 text-[10px] font-medium ${
                             d.isBridge ? "text-black" : "bg-primary/70 text-primary-foreground"
                           }`}
                           style={{
