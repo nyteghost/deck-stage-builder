@@ -898,22 +898,22 @@ function StagePanel({
                     </thead>
                     <tbody>
                       {result.holders.map((h) => (
-                        <tr key={h.label} className="border-b border-border/60 last:border-0">
-                          <td className="py-2 pr-3 font-semibold">
-                            <span
-                              className="mr-2 inline-block h-2.5 w-2.5 rounded-sm align-middle"
-                              style={{ background: HOLDER_COLORS[h.capacity] }}
-                            />
-                            {h.label}
-                          </td>
-                          <td className="py-2 pr-3">{h.capacity}-deck</td>
-                          <td className="py-2 pr-3">{h.capacity}</td>
-                          <td className="py-2 pr-3">{h.w}&#39; × {h.h}&#39;</td>
-                          <td className="py-2 pr-3">({h.x}, {h.y})</td>
-                          <td className="py-2 pr-3">
-                            x: {h.x}–{h.x + h.w}, y: {h.y}–{h.y + h.h}
-                          </td>
-                        </tr>
+                      <tr key={h.label} className="border-b border-border/60 last:border-0">
+                        <td className="py-2 pr-3 font-semibold">
+                          <span
+                            className="mr-2 inline-block h-2.5 w-2.5 rounded-sm align-middle"
+                            style={{ background: HOLDER_COLORS[h.capacity] }}
+                          />
+                          {h.label} — {h.capacity === 1 ? "Single-Deck Holder" : `${h.capacity}-Deck Holder`}
+                        </td>
+                        <td className="py-2 pr-3">{h.capacity}-deck</td>
+                        <td className="py-2 pr-3">{h.capacity}</td>
+                        <td className="py-2 pr-3">{h.w}&#39; × {h.h}&#39;</td>
+                        <td className="py-2 pr-3">({h.x}, {h.y})</td>
+                        <td className="py-2 pr-3">
+                          x: {h.x}–{h.x + h.w}, y: {h.y}–{h.y + h.h}
+                        </td>
+                      </tr>
                       ))}
                     </tbody>
                   </table>
