@@ -173,5 +173,13 @@
   }
   .print-stage table { font-size: 9px; }
   .print-stage .shadow-sm { box-shadow: none !important; }
+  /* make every individual deck cell boundary clearly visible on paper */
+  .print-stage .deck-cell {
+    border-color: #000 !important;
+    border-width: 1.5px !important;
+    background: transparent !important;
+    color: #000 !important;
+  }
+  .print-stage .deck-cell * { color: #000 !important; }
 }
 
