@@ -515,20 +515,14 @@ function manualResult(pieces: ManualPiece[], widthFt: number, lengthFt: number):
     decks.push({ x: p.x, y: p.y, w: p.w, h: p.h, isBridge: true });
   });
 
-  const slots = (widthFt * lengthFt) / 32;
-  if (decks.length < slots * 2) {
-    const filled = decks.length;
-    const total = Math.round((widthFt * lengthFt) / 32);
-    if (filled < total * 1) {
-      // nothing extra
-    }
-    const area = filled * 32;
-    if (area < widthFt * lengthFt) {
-      warnings.push(
-        `${widthFt * lengthFt - area} sq ft of the stage is still empty (${filled} of ${total} deck spaces placed).`,
-      );
-    }
+  const totalSlots = Math.round((widthFt * lengthFt) / 32);
+  const coveredArea = decks.length * 32;
+  if (coveredArea < widthFt * lengthFt) {
+    warnings.push(
+      `${widthFt * lengthFt - coveredArea} sq ft still empty (${decks.length} of ${totalSlots} deck spaces placed).`,
+    );
   }
+
 
   return {
     ok: true,
