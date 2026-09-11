@@ -912,7 +912,7 @@ function StagePanel({
                             className="mr-2 inline-block h-2.5 w-2.5 rounded-sm align-middle"
                             style={{ background: HOLDER_COLORS[h.capacity] }}
                           />
-                          {h.label} — {h.capacity === 1 ? "Single-Deck Holder" : `${h.capacity}-Deck Holder`}
+                          {h.label}
                         </td>
                         <td className="py-2 pr-3">{h.capacity}-deck</td>
                         <td className="py-2 pr-3">{h.capacity}</td>
