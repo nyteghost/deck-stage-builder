@@ -1053,9 +1053,13 @@ function StagePanel({
                     style={{ "--diagram-h": `${canvasH}px` } as React.CSSProperties}
                   >
                     <div
-                      className="stage-diagram relative border border-border bg-muted/40"
+                      className={`stage-diagram relative border border-border bg-muted/40 ${
+                        manual ? "cursor-crosshair" : ""
+                      }`}
                       style={{ width: canvasW || 1, height: canvasH || 1 }}
+                      onClick={handleStageClick}
                     >
+
                       {result.decks.map((d, i) => (
                         <div
                           key={i}
