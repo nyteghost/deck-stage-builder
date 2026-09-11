@@ -816,6 +816,129 @@ function StagePanel({
                 </div>
               </div>
 
+              <div className="rounded-md border border-border p-3">
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setManual(false)}
+                    className={`flex-1 rounded-md border px-2 py-1.5 text-xs transition-colors ${
+                      !manual
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    Auto layout
+                  </button>
+                  <button
+                    type="button"
+                    onClick={enterManual}
+                    className={`flex-1 rounded-md border px-2 py-1.5 text-xs transition-colors ${
+                      manual
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    Place by hand
+                  </button>
+                </div>
+
+                {manual && (
+                  <div className="mt-3 space-y-3 text-xs">
+                    <p className="text-muted-foreground">
+                      Pick a piece, then click the top view to drop it there.
+                    </p>
+
+                    <div className="flex flex-wrap gap-1">
+                      {([3, 2, 1] as const).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setTool({ kind: "holder", capacity: c })}
+                          className={`rounded-md border px-2 py-1 transition-colors ${
+                            tool.kind === "holder" && tool.capacity === c
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-background text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {c}-deck holder
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setTool({ kind: "bridge", capacity: 1 })}
+                        className={`rounded-md border px-2 py-1 transition-colors ${
+                          tool.kind === "bridge"
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        Bridge deck
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTool({ kind: "erase", capacity: 1 })}
+                        className={`rounded-md border px-2 py-1 transition-colors ${
+                          tool.kind === "erase"
+                            ? "border-destructive bg-destructive text-white"
+                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div>
+                      <div className="mb-1 font-medium">Direction</div>
+                      <div className="flex gap-1">
+                        {([
+                          ["x", "Across (left → right)"],
+                          ["y", "Down (front → back)"],
+                        ] as const).map(([a, labelText]) => (
+                          <button
+                            key={a}
+                            type="button"
+                            onClick={() => setAxis(a)}
+                            className={`flex-1 rounded-md border px-2 py-1 transition-colors ${
+                              axis === a
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background text-muted-foreground hover:bg-muted"
+                            }`}
+                          >
+                            {labelText}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={loadAutoPlan}
+                        className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-muted-foreground hover:bg-muted"
+                      >
+                        Reset to auto plan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPieces([]);
+                          setPlaceError(null);
+                        }}
+                        className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-muted-foreground hover:bg-muted"
+                      >
+                        Clear stage
+                      </button>
+                    </div>
+
+                    {placeError && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 font-medium text-destructive">
+                        {placeError}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
 
               <div className="rounded-md bg-muted p-3 text-sm">
                 <div className="flex justify-between py-0.5">
