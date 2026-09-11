@@ -558,9 +558,99 @@ function StagePanel({
 
   const [view, setView] = useState<"top" | "side" | "both">("both");
 
+  // ---- manual placement state ----
+  const [manual, setManual] = useState(false);
+  const [pieces, setPieces] = useState<ManualPiece[]>([]);
+  const [tool, setTool] = useState<Tool>({ kind: "holder", capacity: 3 });
+  const [axis, setAxis] = useState<"x" | "y">("x");
+  const [placeError, setPlaceError] = useState<string | null>(null);
+  const nextId = useRef(0);
 
-  const result = useMemo(() => planStage(width, length, stock), [width, length, stock]);
+  const autoResult = useMemo(() => planStage(width, length, stock), [width, length, stock]);
+  const result = useMemo(
+    () => (manual ? manualResult(pieces, width, length) : autoResult),
+    [manual, pieces, width, length, autoResult],
+  );
+
+  const loadAutoPlan = () => {
+    const seeded = piecesFromResult(autoResult);
+    nextId.current = seeded.length;
+    setPieces(seeded.map((p, i) => ({ ...p, id: `p${i}` })));
+    setPlaceError(null);
+  };
+
+  const enterManual = () => {
+    loadAutoPlan();
+    setManual(true);
+  };
+
+  const handleStageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!manual) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const fx = (e.clientX - rect.left) / scale;
+    const fy = (e.clientY - rect.top) / scale;
+
+    if (tool.kind === "erase") {
+      const hit = pieceAtPoint(pieces, fx, fy);
+      if (hit) {
+        setPieces((prev) => prev.filter((p) => p.id !== hit.id));
+        setPlaceError(null);
+      }
+      return;
+    }
+
+    const { w, h } = pieceFootprint(tool.kind, tool.capacity, axis);
+    const { x, y } = snapOrigin(fx, fy, axis);
+    const cand: ManualPiece = {
+      id: `p${nextId.current++}`,
+      kind: tool.kind,
+      capacity: tool.kind === "bridge" ? 1 : tool.capacity,
+      axis,
+      x,
+      y,
+      w,
+      h,
+    };
+
+    if (x < 0 || y < 0 || x + w > width || y + h > length) {
+      setPlaceError("That piece would hang off the stage.");
+      return;
+    }
+    if (pieces.some((p) => rectsOverlap(p, cand))) {
+      setPlaceError("That space is already taken — erase what's there first.");
+      return;
+    }
+    if (cand.kind === "holder") {
+      const used = pieces.filter((p) => p.kind === "holder" && p.capacity === cand.capacity).length;
+      const avail =
+        cand.capacity === 1 ? stock.one : cand.capacity === 2 ? stock.two : stock.three;
+      if (used + 1 > avail) {
+        setPlaceError(`No ${cand.capacity}-deck holders left for this stage (${avail} available).`);
+        return;
+      }
+      const deckCount = pieces.reduce((n, p) => n + (p.kind === "holder" ? p.capacity : 1), 0);
+      if (deckCount + cand.capacity > stock.decks) {
+        setPlaceError(`That would need more than the ${stock.decks} decks available.`);
+        return;
+      }
+    } else {
+      if (!bridgeSupport(pieces, cand)) {
+        setPlaceError("A bridge needs a holder on both sides of it — place the holders first.");
+        return;
+      }
+      const deckCount = pieces.reduce((n, p) => n + (p.kind === "holder" ? p.capacity : 1), 0);
+      if (deckCount + 1 > stock.decks) {
+        setPlaceError(`That would need more than the ${stock.decks} decks available.`);
+        return;
+      }
+    }
+
+    setPieces((prev) => [...prev, cand]);
+    setPlaceError(null);
+  };
+
   const totalArea = width * length;
+
 
   const usage = useMemo<Stock>(() => {
     if (!result.ok) return { decks: 0, one: 0, two: 0, three: 0 };
