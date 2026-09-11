@@ -371,6 +371,174 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
   };
 }
 
+// ---------------------------------------------------------------------------
+// Manual placement
+// ---------------------------------------------------------------------------
+
+type ManualPiece = {
+  id: string;
+  kind: "holder" | "bridge";
+  capacity: 1 | 2 | 3;
+  axis: "x" | "y"; // "x": decks 4' wide × 8' deep, run left→right. "y": decks 8'×4', run top→bottom
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+type Tool = { kind: "holder" | "bridge" | "erase"; capacity: 1 | 2 | 3 };
+
+function pieceFootprint(kind: "holder" | "bridge", capacity: 1 | 2 | 3, axis: "x" | "y") {
+  const n = kind === "bridge" ? 1 : capacity;
+  return axis === "x" ? { w: n * 4, h: 8 } : { w: 8, h: n * 4 };
+}
+
+function snapOrigin(fx: number, fy: number, axis: "x" | "y") {
+  return axis === "x"
+    ? { x: Math.floor(fx / 4) * 4, y: Math.floor(fy / 8) * 8 }
+    : { x: Math.floor(fx / 8) * 8, y: Math.floor(fy / 4) * 4 };
+}
+
+function rectsOverlap(
+  a: { x: number; y: number; w: number; h: number },
+  b: { x: number; y: number; w: number; h: number },
+) {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+function holderAtPoint(pieces: ManualPiece[], px: number, py: number) {
+  return pieces.find(
+    (p) => p.kind === "holder" && px > p.x && px < p.x + p.w && py > p.y && py < p.y + p.h,
+  );
+}
+
+function pieceAtPoint(pieces: ManualPiece[], px: number, py: number) {
+  return [...pieces]
+    .reverse()
+    .find((p) => px > p.x && px < p.x + p.w && py > p.y && py < p.y + p.h);
+}
+
+/** The four neighbour probe points around a piece (left, right, above, below). */
+function neighbourPoints(p: { x: number; y: number; w: number; h: number }) {
+  return {
+    left: [p.x - 2, p.y + p.h / 2] as const,
+    right: [p.x + p.w + 2, p.y + p.h / 2] as const,
+    up: [p.x + p.w / 2, p.y - 2] as const,
+    down: [p.x + p.w / 2, p.y + p.h + 2] as const,
+  };
+}
+
+function bridgeSupport(pieces: ManualPiece[], br: { x: number; y: number; w: number; h: number }) {
+  const n = neighbourPoints(br);
+  const l = holderAtPoint(pieces, ...n.left);
+  const r = holderAtPoint(pieces, ...n.right);
+  if (l && r) return [l, r] as const;
+  const u = holderAtPoint(pieces, ...n.up);
+  const d = holderAtPoint(pieces, ...n.down);
+  if (u && d) return [u, d] as const;
+  return null;
+}
+
+/** Recreate editable pieces from an automatic plan so manual mode starts there. */
+function piecesFromResult(res: Result): ManualPiece[] {
+  if (!res.ok) return [];
+  let n = 0;
+  const out: ManualPiece[] = [];
+  for (const h of res.holders) {
+    const deck = res.decks.find((d) => d.x === h.x && d.y === h.y);
+    const axis: "x" | "y" = deck && deck.w === 8 ? "y" : "x";
+    out.push({ id: `m${n++}`, kind: "holder", capacity: h.capacity, axis, x: h.x, y: h.y, w: h.w, h: h.h });
+  }
+  for (const b of res.bridges) {
+    out.push({
+      id: `m${n++}`,
+      kind: "bridge",
+      capacity: 1,
+      axis: b.w === 8 ? "y" : "x",
+      x: b.x,
+      y: b.y,
+      w: b.w,
+      h: b.h,
+    });
+  }
+  return out;
+}
+
+/** Turn manually placed pieces into the same shape the auto planner returns. */
+function manualResult(pieces: ManualPiece[], widthFt: number, lengthFt: number): Result {
+  if (widthFt <= 0 || lengthFt <= 0) {
+    return { ok: false, reason: "Enter a width and length greater than zero." };
+  }
+
+  const holderPieces = [...pieces.filter((p) => p.kind === "holder")].sort(
+    (p, q) => p.y - q.y || p.x - q.x,
+  );
+  const labels = new Map<string, Holder>();
+  const holders: Holder[] = [];
+  holderPieces.forEach((p, i) => {
+    const h: Holder = {
+      x: p.x,
+      y: p.y,
+      w: p.w,
+      h: p.h,
+      capacity: p.capacity,
+      label: `H${i + 1}`,
+    };
+    labels.set(p.id, h);
+    holders.push(h);
+  });
+
+  const decks: Deck[] = [];
+  for (const p of holderPieces) {
+    for (let i = 0; i < p.capacity; i++) {
+      decks.push(
+        p.axis === "x"
+          ? { x: p.x + i * 4, y: p.y, w: 4, h: 8 }
+          : { x: p.x, y: p.y + i * 4, w: 8, h: 4 },
+      );
+    }
+  }
+
+  const warnings: string[] = [];
+  const bridges: Bridge[] = [];
+  const bridgePieces = [...pieces.filter((p) => p.kind === "bridge")].sort(
+    (p, q) => p.y - q.y || p.x - q.x,
+  );
+  bridgePieces.forEach((p, i) => {
+    const label = `B${i + 1}`;
+    const support = bridgeSupport(pieces, p);
+    const between: [string, string] = support
+      ? [labels.get(support[0].id)?.label ?? "?", labels.get(support[1].id)?.label ?? "?"]
+      : ["?", "?"];
+    if (!support) warnings.push(`${label} has no holder on both sides — it is unsupported.`);
+    bridges.push({ x: p.x, y: p.y, w: p.w, h: p.h, label, between });
+    decks.push({ x: p.x, y: p.y, w: p.w, h: p.h, isBridge: true });
+  });
+
+  const slots = (widthFt * lengthFt) / 32;
+  if (decks.length < slots * 2) {
+    const filled = decks.length;
+    const total = Math.round((widthFt * lengthFt) / 32);
+    if (filled < total * 1) {
+      // nothing extra
+    }
+    const area = filled * 32;
+    if (area < widthFt * lengthFt) {
+      warnings.push(
+        `${widthFt * lengthFt - area} sq ft of the stage is still empty (${filled} of ${total} deck spaces placed).`,
+      );
+    }
+  }
+
+  return {
+    ok: true,
+    decks,
+    holders,
+    bridges,
+    holderError: warnings.length ? warnings.join(" ") : undefined,
+  };
+}
+
 
 function StagePanel({
   title,
