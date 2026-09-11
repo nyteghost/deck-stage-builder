@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 
 
@@ -371,6 +371,168 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
   };
 }
 
+// ---------------------------------------------------------------------------
+// Manual placement
+// ---------------------------------------------------------------------------
+
+type ManualPiece = {
+  id: string;
+  kind: "holder" | "bridge";
+  capacity: 1 | 2 | 3;
+  axis: "x" | "y"; // "x": decks 4' wide × 8' deep, run left→right. "y": decks 8'×4', run top→bottom
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+type Tool = { kind: "holder" | "bridge" | "erase"; capacity: 1 | 2 | 3 };
+
+function pieceFootprint(kind: "holder" | "bridge", capacity: 1 | 2 | 3, axis: "x" | "y") {
+  const n = kind === "bridge" ? 1 : capacity;
+  return axis === "x" ? { w: n * 4, h: 8 } : { w: 8, h: n * 4 };
+}
+
+function snapOrigin(fx: number, fy: number, axis: "x" | "y") {
+  return axis === "x"
+    ? { x: Math.floor(fx / 4) * 4, y: Math.floor(fy / 8) * 8 }
+    : { x: Math.floor(fx / 8) * 8, y: Math.floor(fy / 4) * 4 };
+}
+
+function rectsOverlap(
+  a: { x: number; y: number; w: number; h: number },
+  b: { x: number; y: number; w: number; h: number },
+) {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+function holderAtPoint(pieces: ManualPiece[], px: number, py: number) {
+  return pieces.find(
+    (p) => p.kind === "holder" && px > p.x && px < p.x + p.w && py > p.y && py < p.y + p.h,
+  );
+}
+
+function pieceAtPoint(pieces: ManualPiece[], px: number, py: number) {
+  return [...pieces]
+    .reverse()
+    .find((p) => px > p.x && px < p.x + p.w && py > p.y && py < p.y + p.h);
+}
+
+/** The four neighbour probe points around a piece (left, right, above, below). */
+function neighbourPoints(p: { x: number; y: number; w: number; h: number }) {
+  return {
+    left: [p.x - 2, p.y + p.h / 2] as const,
+    right: [p.x + p.w + 2, p.y + p.h / 2] as const,
+    up: [p.x + p.w / 2, p.y - 2] as const,
+    down: [p.x + p.w / 2, p.y + p.h + 2] as const,
+  };
+}
+
+function bridgeSupport(pieces: ManualPiece[], br: { x: number; y: number; w: number; h: number }) {
+  const n = neighbourPoints(br);
+  const l = holderAtPoint(pieces, ...n.left);
+  const r = holderAtPoint(pieces, ...n.right);
+  if (l && r) return [l, r] as const;
+  const u = holderAtPoint(pieces, ...n.up);
+  const d = holderAtPoint(pieces, ...n.down);
+  if (u && d) return [u, d] as const;
+  return null;
+}
+
+/** Recreate editable pieces from an automatic plan so manual mode starts there. */
+function piecesFromResult(res: Result): ManualPiece[] {
+  if (!res.ok) return [];
+  let n = 0;
+  const out: ManualPiece[] = [];
+  for (const h of res.holders) {
+    const deck = res.decks.find((d) => d.x === h.x && d.y === h.y);
+    const axis: "x" | "y" = deck && deck.w === 8 ? "y" : "x";
+    out.push({ id: `m${n++}`, kind: "holder", capacity: h.capacity, axis, x: h.x, y: h.y, w: h.w, h: h.h });
+  }
+  for (const b of res.bridges) {
+    out.push({
+      id: `m${n++}`,
+      kind: "bridge",
+      capacity: 1,
+      axis: b.w === 8 ? "y" : "x",
+      x: b.x,
+      y: b.y,
+      w: b.w,
+      h: b.h,
+    });
+  }
+  return out;
+}
+
+/** Turn manually placed pieces into the same shape the auto planner returns. */
+function manualResult(pieces: ManualPiece[], widthFt: number, lengthFt: number): Result {
+  if (widthFt <= 0 || lengthFt <= 0) {
+    return { ok: false, reason: "Enter a width and length greater than zero." };
+  }
+
+  const holderPieces = [...pieces.filter((p) => p.kind === "holder")].sort(
+    (p, q) => p.y - q.y || p.x - q.x,
+  );
+  const labels = new Map<string, Holder>();
+  const holders: Holder[] = [];
+  holderPieces.forEach((p, i) => {
+    const h: Holder = {
+      x: p.x,
+      y: p.y,
+      w: p.w,
+      h: p.h,
+      capacity: p.capacity,
+      label: `H${i + 1}`,
+    };
+    labels.set(p.id, h);
+    holders.push(h);
+  });
+
+  const decks: Deck[] = [];
+  for (const p of holderPieces) {
+    for (let i = 0; i < p.capacity; i++) {
+      decks.push(
+        p.axis === "x"
+          ? { x: p.x + i * 4, y: p.y, w: 4, h: 8 }
+          : { x: p.x, y: p.y + i * 4, w: 8, h: 4 },
+      );
+    }
+  }
+
+  const warnings: string[] = [];
+  const bridges: Bridge[] = [];
+  const bridgePieces = [...pieces.filter((p) => p.kind === "bridge")].sort(
+    (p, q) => p.y - q.y || p.x - q.x,
+  );
+  bridgePieces.forEach((p, i) => {
+    const label = `B${i + 1}`;
+    const support = bridgeSupport(pieces, p);
+    const between: [string, string] = support
+      ? [labels.get(support[0].id)?.label ?? "?", labels.get(support[1].id)?.label ?? "?"]
+      : ["?", "?"];
+    if (!support) warnings.push(`${label} has no holder on both sides — it is unsupported.`);
+    bridges.push({ x: p.x, y: p.y, w: p.w, h: p.h, label, between });
+    decks.push({ x: p.x, y: p.y, w: p.w, h: p.h, isBridge: true });
+  });
+
+  const totalSlots = Math.round((widthFt * lengthFt) / 32);
+  const coveredArea = decks.length * 32;
+  if (coveredArea < widthFt * lengthFt) {
+    warnings.push(
+      `${widthFt * lengthFt - coveredArea} sq ft still empty (${decks.length} of ${totalSlots} deck spaces placed).`,
+    );
+  }
+
+
+  return {
+    ok: true,
+    decks,
+    holders,
+    bridges,
+    holderError: warnings.length ? warnings.join(" ") : undefined,
+  };
+}
+
 
 function StagePanel({
   title,
@@ -396,9 +558,99 @@ function StagePanel({
 
   const [view, setView] = useState<"top" | "side" | "both">("both");
 
+  // ---- manual placement state ----
+  const [manual, setManual] = useState(false);
+  const [pieces, setPieces] = useState<ManualPiece[]>([]);
+  const [tool, setTool] = useState<Tool>({ kind: "holder", capacity: 3 });
+  const [axis, setAxis] = useState<"x" | "y">("x");
+  const [placeError, setPlaceError] = useState<string | null>(null);
+  const nextId = useRef(0);
 
-  const result = useMemo(() => planStage(width, length, stock), [width, length, stock]);
+  const autoResult = useMemo(() => planStage(width, length, stock), [width, length, stock]);
+  const result = useMemo(
+    () => (manual ? manualResult(pieces, width, length) : autoResult),
+    [manual, pieces, width, length, autoResult],
+  );
+
+  const loadAutoPlan = () => {
+    const seeded = piecesFromResult(autoResult);
+    nextId.current = seeded.length;
+    setPieces(seeded.map((p, i) => ({ ...p, id: `p${i}` })));
+    setPlaceError(null);
+  };
+
+  const enterManual = () => {
+    loadAutoPlan();
+    setManual(true);
+  };
+
+  const handleStageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!manual) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const fx = (e.clientX - rect.left) / scale;
+    const fy = (e.clientY - rect.top) / scale;
+
+    if (tool.kind === "erase") {
+      const hit = pieceAtPoint(pieces, fx, fy);
+      if (hit) {
+        setPieces((prev) => prev.filter((p) => p.id !== hit.id));
+        setPlaceError(null);
+      }
+      return;
+    }
+
+    const { w, h } = pieceFootprint(tool.kind, tool.capacity, axis);
+    const { x, y } = snapOrigin(fx, fy, axis);
+    const cand: ManualPiece = {
+      id: `p${nextId.current++}`,
+      kind: tool.kind,
+      capacity: tool.kind === "bridge" ? 1 : tool.capacity,
+      axis,
+      x,
+      y,
+      w,
+      h,
+    };
+
+    if (x < 0 || y < 0 || x + w > width || y + h > length) {
+      setPlaceError("That piece would hang off the stage.");
+      return;
+    }
+    if (pieces.some((p) => rectsOverlap(p, cand))) {
+      setPlaceError("That space is already taken — erase what's there first.");
+      return;
+    }
+    if (cand.kind === "holder") {
+      const used = pieces.filter((p) => p.kind === "holder" && p.capacity === cand.capacity).length;
+      const avail =
+        cand.capacity === 1 ? stock.one : cand.capacity === 2 ? stock.two : stock.three;
+      if (used + 1 > avail) {
+        setPlaceError(`No ${cand.capacity}-deck holders left for this stage (${avail} available).`);
+        return;
+      }
+      const deckCount = pieces.reduce((n, p) => n + (p.kind === "holder" ? p.capacity : 1), 0);
+      if (deckCount + cand.capacity > stock.decks) {
+        setPlaceError(`That would need more than the ${stock.decks} decks available.`);
+        return;
+      }
+    } else {
+      if (!bridgeSupport(pieces, cand)) {
+        setPlaceError("A bridge needs a holder on both sides of it — place the holders first.");
+        return;
+      }
+      const deckCount = pieces.reduce((n, p) => n + (p.kind === "holder" ? p.capacity : 1), 0);
+      if (deckCount + 1 > stock.decks) {
+        setPlaceError(`That would need more than the ${stock.decks} decks available.`);
+        return;
+      }
+    }
+
+    setPieces((prev) => [...prev, cand]);
+    setPlaceError(null);
+  };
+
   const totalArea = width * length;
+
 
   const usage = useMemo<Stock>(() => {
     if (!result.ok) return { decks: 0, one: 0, two: 0, three: 0 };
@@ -564,6 +816,129 @@ function StagePanel({
                 </div>
               </div>
 
+              <div className="rounded-md border border-border p-3">
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setManual(false)}
+                    className={`flex-1 rounded-md border px-2 py-1.5 text-xs transition-colors ${
+                      !manual
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    Auto layout
+                  </button>
+                  <button
+                    type="button"
+                    onClick={enterManual}
+                    className={`flex-1 rounded-md border px-2 py-1.5 text-xs transition-colors ${
+                      manual
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    Place by hand
+                  </button>
+                </div>
+
+                {manual && (
+                  <div className="mt-3 space-y-3 text-xs">
+                    <p className="text-muted-foreground">
+                      Pick a piece, then click the top view to drop it there.
+                    </p>
+
+                    <div className="flex flex-wrap gap-1">
+                      {([3, 2, 1] as const).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setTool({ kind: "holder", capacity: c })}
+                          className={`rounded-md border px-2 py-1 transition-colors ${
+                            tool.kind === "holder" && tool.capacity === c
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-background text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {c}-deck holder
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setTool({ kind: "bridge", capacity: 1 })}
+                        className={`rounded-md border px-2 py-1 transition-colors ${
+                          tool.kind === "bridge"
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        Bridge deck
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTool({ kind: "erase", capacity: 1 })}
+                        className={`rounded-md border px-2 py-1 transition-colors ${
+                          tool.kind === "erase"
+                            ? "border-destructive bg-destructive text-white"
+                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div>
+                      <div className="mb-1 font-medium">Direction</div>
+                      <div className="flex gap-1">
+                        {([
+                          ["x", "Across (left → right)"],
+                          ["y", "Down (front → back)"],
+                        ] as const).map(([a, labelText]) => (
+                          <button
+                            key={a}
+                            type="button"
+                            onClick={() => setAxis(a)}
+                            className={`flex-1 rounded-md border px-2 py-1 transition-colors ${
+                              axis === a
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background text-muted-foreground hover:bg-muted"
+                            }`}
+                          >
+                            {labelText}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={loadAutoPlan}
+                        className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-muted-foreground hover:bg-muted"
+                      >
+                        Reset to auto plan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPieces([]);
+                          setPlaceError(null);
+                        }}
+                        className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-muted-foreground hover:bg-muted"
+                      >
+                        Clear stage
+                      </button>
+                    </div>
+
+                    {placeError && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 font-medium text-destructive">
+                        {placeError}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
 
               <div className="rounded-md bg-muted p-3 text-sm">
                 <div className="flex justify-between py-0.5">
@@ -678,9 +1053,13 @@ function StagePanel({
                     style={{ "--diagram-h": `${canvasH}px` } as React.CSSProperties}
                   >
                     <div
-                      className="stage-diagram relative border border-border bg-muted/40"
+                      className={`stage-diagram relative border border-border bg-muted/40 ${
+                        manual ? "cursor-crosshair" : ""
+                      }`}
                       style={{ width: canvasW || 1, height: canvasH || 1 }}
+                      onClick={handleStageClick}
                     >
+
                       {result.decks.map((d, i) => (
                         <div
                           key={i}
