@@ -584,8 +584,93 @@ function StagePanel({
     setManual(true);
   };
 
+  const [drag, setDrag] = useState<{
+    id: string;
+    sx: number;
+    sy: number;
+    nx: number;
+    ny: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressClick = useRef(false);
+
+  const toFeet = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return { fx: (e.clientX - rect.left) / scale, fy: (e.clientY - rect.top) / scale };
+  };
+
+  const dragTarget = (p: ManualPiece, d: { sx: number; sy: number }, fx: number, fy: number) => {
+    const stepX = p.axis === "x" ? 4 : 8;
+    const stepY = p.axis === "x" ? 8 : 4;
+    return {
+      nx: p.x + Math.round((fx - d.sx) / stepX) * stepX,
+      ny: p.y + Math.round((fy - d.sy) / stepY) * stepY,
+    };
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!manual || tool.kind === "erase") return;
+    const { fx, fy } = toFeet(e);
+    const hit = pieceAtPoint(pieces, fx, fy);
+    if (!hit) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDrag({ id: hit.id, sx: fx, sy: fy, nx: hit.x, ny: hit.y, moved: false });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag) return;
+    const p = pieces.find((q) => q.id === drag.id);
+    if (!p) return;
+    const { fx, fy } = toFeet(e);
+    const { nx, ny } = dragTarget(p, drag, fx, fy);
+    const moved = drag.moved || Math.hypot(fx - drag.sx, fy - drag.sy) > 0.5;
+    if (nx !== drag.nx || ny !== drag.ny || moved !== drag.moved)
+      setDrag({ ...drag, nx, ny, moved });
+  };
+
+  const handlePointerUp = () => {
+    if (!drag) return;
+    const d = drag;
+    setDrag(null);
+    if (!d.moved) return;
+    suppressClick.current = true;
+    const p = pieces.find((q) => q.id === d.id);
+    if (!p || (p.x === d.nx && p.y === d.ny)) return;
+    const moved = { ...p, x: d.nx, y: d.ny };
+    if (moved.x < 0 || moved.y < 0 || moved.x + moved.w > width || moved.y + moved.h > length) {
+      setPlaceError("That piece would hang off the stage.");
+      return;
+    }
+    const others = pieces.filter((q) => q.id !== p.id);
+    if (others.some((q) => rectsOverlap(q, moved))) {
+      setPlaceError("That space is already taken.");
+      return;
+    }
+    const next = [...others, moved];
+    if (moved.kind === "bridge" && !bridgeSupport(next, moved)) {
+      setPlaceError("A bridge needs a holder on both sides of it.");
+      return;
+    }
+    if (next.some((q) => q.kind === "bridge" && !bridgeSupport(next, q))) {
+      setPlaceError("Moving that holder would leave a bridge without support.");
+      return;
+    }
+    setPieces(next);
+    setPlaceError(null);
+  };
+
+  const dragGhost = (() => {
+    if (!drag || !drag.moved) return null;
+    const p = pieces.find((q) => q.id === drag.id);
+    return p ? { ...p, x: drag.nx, y: drag.ny } : null;
+  })();
+
   const handleStageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!manual) return;
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const fx = (e.clientX - rect.left) / scale;
     const fy = (e.clientY - rect.top) / scale;
@@ -1058,7 +1143,22 @@ function StagePanel({
                       }`}
                       style={{ width: canvasW || 1, height: canvasH || 1 }}
                       onClick={handleStageClick}
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={() => setDrag(null)}
                     >
+                      {dragGhost && (
+                        <div
+                          className="pointer-events-none absolute z-20 rounded-sm border-2 border-dashed border-foreground bg-foreground/20"
+                          style={{
+                            left: dragGhost.x * scale,
+                            top: dragGhost.y * scale,
+                            width: dragGhost.w * scale,
+                            height: dragGhost.h * scale,
+                          }}
+                        />
+                      )}
 
                       {result.decks.map((d, i) => (
                         <div
