@@ -66,6 +66,49 @@ const MIN_HEIGHT_IN = 32;
 const MAX_HEIGHT_IN = 44;
 const HEIGHT_PRESETS = [32, 36, 40, 44];
 
+// ---------- persisted stage settings (survive rebuilds, remounts, reloads) ----------
+const STAGE_STORE_KEY = "stage-planner:stages";
+const APP_STORE_KEY = "stage-planner:app";
+type SavedStage = {
+  width?: number;
+  length?: number;
+  heightIn?: number;
+  heightText?: string;
+  stageName?: string;
+  view?: "top" | "side" | "both";
+  mostlyThree?: boolean;
+  allowTwo?: boolean;
+};
+type SavedApp = {
+  showSecond?: boolean;
+  showThird?: boolean;
+  showFourth?: boolean;
+  showFifth?: boolean;
+  eventName?: string;
+};
+
+function readStored<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function writeStored(key: string, value: unknown) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // storage unavailable — ignore
+  }
+}
+function writeSavedStage(stageId: string, s: SavedStage) {
+  const all = readStored<Record<string, SavedStage>>(STAGE_STORE_KEY, {});
+  all[stageId] = s;
+  writeStored(STAGE_STORE_KEY, all);
+}
 
 type ElevationSegment = {
   label: string;
@@ -598,6 +641,31 @@ function StagePanel({
     () => (manual ? manualResult(pieces, width, length) : autoResult),
     [manual, pieces, width, length, autoResult],
   );
+
+  // Keep stage settings (width/length/height/name/etc.) saved so nothing wipes
+  // them — not the rebuild button, a page reload, or a component remount.
+  const skipSave = useRef(true);
+  useEffect(() => {
+    const s = readStored<Record<string, SavedStage>>(STAGE_STORE_KEY, {})[stageId];
+    if (s) {
+      if (typeof s.width === "number" && s.width > 0) setWidth(s.width);
+      if (typeof s.length === "number" && s.length > 0) setLength(s.length);
+      if (typeof s.heightIn === "number") setHeightIn(s.heightIn);
+      if (typeof s.heightText === "string" && s.heightText !== "") setHeightText(s.heightText);
+      if (typeof s.stageName === "string") setStageName(s.stageName);
+      if (s.view === "top" || s.view === "side" || s.view === "both") setView(s.view);
+      if (typeof s.mostlyThree === "boolean") setMostlyThree(s.mostlyThree);
+      if (typeof s.allowTwo === "boolean") setAllowTwo(s.allowTwo);
+    }
+    skipSave.current = true;
+  }, [stageId]);
+  useEffect(() => {
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
+    }
+    writeSavedStage(stageId, { width, length, heightIn, heightText, stageName, view, mostlyThree, allowTwo });
+  }, [stageId, width, length, heightIn, heightText, stageName, view, mostlyThree, allowTwo]);
 
   const loadAutoPlan = () => {
     const seeded = piecesFromResult(autoResult);
