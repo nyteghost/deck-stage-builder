@@ -1519,6 +1519,7 @@ function Index() {
   const [showFifth, setShowFifth] = useState(false);
   const [used4, setUsed4] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
   const [used5, setUsed5] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [rebuildKey, setRebuildKey] = useState(0);
   const [eventName, setEventName] = useState("");
   const [eventNameDraft, setEventNameDraft] = useState("");
   const [showEventModal, setShowEventModal] = useState(false);
