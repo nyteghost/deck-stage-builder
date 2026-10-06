@@ -74,10 +74,16 @@ export function StageLayout({ stages: sourceStages }: { stages: LayoutStage[] })
     setRotations(previous => ({ ...previous, [selected.id]: !previous[selected.id] }));
     setError("");
   };
+  const printBounds = {
+    x: Math.max(0, Math.min(...stages.map(stage => positionOf(stage.id).x)) - 2),
+    y: Math.max(0, Math.min(...stages.map(stage => positionOf(stage.id).y)) - 2),
+    right: Math.max(8, ...stages.map(stage => positionOf(stage.id).x + stage.width)) + 2,
+    bottom: Math.max(8, ...stages.map(stage => positionOf(stage.id).y + stage.length)) + 2,
+  };
 
   return (
-    <section className="no-print mb-10" aria-labelledby="layout-title">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <section className="print-layout mb-10" aria-labelledby="layout-title">
+      <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 id="layout-title" className="text-lg font-semibold">Layout view</h2>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -91,7 +97,7 @@ export function StageLayout({ stages: sourceStages }: { stages: LayoutStage[] })
             onClick={() => { setPositions({}); setRotations({}); setError(""); }}><RotateCcw /></Button>
         </div>
       </div>
-      <div className="overflow-auto rounded-md border border-border bg-muted/30" style={{ maxHeight: 580 }}>
+      <div className="no-print overflow-auto rounded-md border border-border bg-muted/30" style={{ maxHeight: 580 }}>
         <div className="layout-workspace relative" aria-label="Stage layout canvas"
           style={{ width: worldWidth * zoom, height: worldHeight * zoom, backgroundSize: `${4 * zoom}px ${4 * zoom}px` }}>
           <span className="pointer-events-none absolute left-2 top-1 text-[10px] text-muted-foreground">0, 0 · feet</span>
@@ -154,7 +160,7 @@ export function StageLayout({ stages: sourceStages }: { stages: LayoutStage[] })
           })}
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+      <div className="no-print mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
         {selected && <>
           <span className="flex items-center gap-2 font-semibold"><Move className="size-4" />{selected.name}</span>
           <span>{selected.width} × {selected.length} ft · {selected.heightIn}" high</span>
@@ -163,7 +169,34 @@ export function StageLayout({ stages: sourceStages }: { stages: LayoutStage[] })
         </>}
         <span className="ml-auto text-muted-foreground">Grid: 4 ft · Snap: 1 ft</span>
       </div>
-      {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="no-print mt-2 text-sm text-destructive">{error}</p>}
+      <div className="print-only">
+        <h2 className="mb-3 text-lg font-semibold">Layout view</h2>
+        <svg className="print-layout-diagram" role="img" aria-label="Complete arranged stage layout"
+          viewBox={`${printBounds.x} ${printBounds.y} ${printBounds.right - printBounds.x} ${printBounds.bottom - printBounds.y}`}>
+          {stages.map((stage, index) => {
+            const position = positionOf(stage.id);
+            const labelSize = Math.min(2, stage.width / 5, stage.length / 3);
+            return <g key={stage.id} transform={`translate(${position.x} ${position.y})`}>
+              <rect width={stage.width} height={stage.length} className="print-layout-outline" />
+              {stage.decks.map((deck, deckIndex) => <rect key={deckIndex} x={deck.x} y={deck.y} width={deck.w} height={deck.h}
+                className={deck.isBridge ? "layout-bridge" : "layout-deck"} strokeWidth={0.7} vectorEffect="non-scaling-stroke" />)}
+              {stage.holders.map((holder, holderIndex) => <rect key={holderIndex} x={holder.x} y={holder.y} width={holder.w} height={holder.h}
+                className={`layout-holder layout-holder-${holder.capacity}`} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />)}
+              <text x={stage.width / 2} y={stage.length / 2} textAnchor="middle" dominantBaseline="middle"
+                fontSize={labelSize} className="print-layout-number">{index + 1}</text>
+            </g>;
+          })}
+        </svg>
+        <table className="print-layout-key mt-4 w-full text-left text-xs">
+          <thead><tr><th>#</th><th>Stage</th><th>Width × Length</th><th>Height</th><th>Position (x, y) ft</th></tr></thead>
+          <tbody>{stages.map((stage, index) => <tr key={stage.id}>
+            <td>{index + 1}</td><td>{stage.name}{!stage.valid ? " — plan unavailable" : ""}</td>
+            <td>{stage.width}′ × {stage.length}′</td><td>{stage.heightIn}″</td>
+            <td>({positionOf(stage.id).x}, {positionOf(stage.id).y})</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
     </section>
   );
 }
