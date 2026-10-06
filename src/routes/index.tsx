@@ -608,6 +608,18 @@ function StagePanel({
     setManual(true);
   };
 
+  // Rebuild from the auto plan when the global "rebuild all" button is pressed.
+  const firstRebuild = useRef(true);
+  useEffect(() => {
+    if (firstRebuild.current) {
+      firstRebuild.current = false;
+      return;
+    }
+    setManual(false);
+    setPlaceError(null);
+    setDrag(null);
+  }, [rebuildKey]);
+
   const [drag, setDrag] = useState<{
     id: string;
     sx: number;
