@@ -9,6 +9,7 @@ export type LayoutStage = {
   length: number;
   heightIn: number;
   valid: boolean;
+  quantity?: number;
   decks: { x: number; y: number; w: number; h: number; isBridge?: boolean }[];
   holders: { x: number; y: number; w: number; h: number; capacity: 1 | 2 | 3 }[];
 };
