@@ -198,6 +198,11 @@
     transform: scale(0.6);
     transform-origin: top left;
   }
+  .print-stage .stage-diagram .pointer-events-none span {
+    color: var(--foreground) !important;
+    text-shadow: none !important;
+    filter: none !important;
+  }
   .print-stage table { font-size: 9px; }
   .print-stage-body > .space-y-6 > div { padding: 3mm !important; }
   .print-layout { margin-bottom: 0 !important; break-after: page; }
