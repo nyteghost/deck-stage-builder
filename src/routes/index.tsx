@@ -634,6 +634,8 @@ function StagePanel({
   const [quantityError, setQuantityError] = useState("");
   const isSingleDeckStage = (width === 4 && length === 8) || (width === 8 && length === 4);
   const stageQuantity = isSingleDeckStage ? quantity : 1;
+  const [looseBridgesRaw, setLooseBridges] = useState(0);
+  const looseBridges = isSingleDeckStage ? looseBridgesRaw : 0;
 
   const displayTitle = stageName.trim() || title;
 
@@ -918,7 +920,8 @@ function StagePanel({
     }
     return { decks: u.decks * stageQuantity, one: u.one * stageQuantity, two: u.two * stageQuantity, three: u.three * stageQuantity };
   }, [result, stageQuantity, singleAllocation]);
-  const usage = useMemo<Stock>(() => ({ ...baseUsage, ...stairs }), [baseUsage, stairs]);
+  const maxLooseBridges = Math.max(0, stock.decks - baseUsage.decks);
+  const usage = useMemo<Stock>(() => ({ ...baseUsage, decks: baseUsage.decks + Math.min(looseBridges, maxLooseBridges), ...stairs }), [baseUsage, stairs, looseBridges, maxLooseBridges]);
 
   useEffect(() => {
     onUsage?.(usage);
@@ -936,13 +939,14 @@ function StagePanel({
   useEffect(() => {
     onLayoutChange?.({
       id: stageId, name: displayTitle, width, length, heightIn, quantity: stageQuantity,
+      looseBridges: Math.min(looseBridges, maxLooseBridges),
       valid: result.ok && !result.holderError,
       decks: result.ok ? result.decks : [],
       holders: result.ok ? result.holders : [],
       copyHolders: result.ok && singleAllocation && result.decks.length === 1 && result.holders.length === 1
         ? singleAllocation.capacities.map(capacity => result.holders.map(h => ({ ...h, capacity }))) : undefined,
     });
-  }, [stageId, displayTitle, width, length, heightIn, stageQuantity, result, singleAllocation, onLayoutChange]);
+  }, [stageId, displayTitle, width, length, heightIn, stageQuantity, result, singleAllocation, onLayoutChange, looseBridges, maxLooseBridges]);
 
 
   return (
@@ -1028,6 +1032,15 @@ function StagePanel({
                     aria-invalid={!!quantityError} aria-describedby={quantityError ? `${stageId}-quantity-error` : undefined}
                     className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                   {quantityError && <p id={`${stageId}-quantity-error`} role="alert" className="mt-1 text-xs text-destructive">{quantityError}</p>}
+                  <label htmlFor={`${stageId}-loose-bridges`} className="mt-3 block text-sm font-medium">Loose bridge decks</label>
+                  <input id={`${stageId}-loose-bridges`} type="number" min={0} max={maxLooseBridges} step={1}
+                    value={looseBridgesRaw}
+                    onChange={event => {
+                      const n = Math.floor(Number(event.target.value) || 0);
+                      setLooseBridges(Math.max(0, Math.min(n, maxLooseBridges)));
+                    }}
+                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  <p className="mt-1 text-xs text-muted-foreground">Unattached 4×8 decks you can move in Layout view ({maxLooseBridges} decks available).</p>
                 </div>
               )}
 
@@ -1586,11 +1599,17 @@ function Index() {
     if (!stage) return [];
     const parsed = stageQuantitySchema.safeParse(stage.quantity ?? 1);
     const count = parsed.success ? parsed.data : 1;
-    return Array.from({ length: count }, (_, index) => ({ ...stage,
+    const copies: LayoutStage[] = Array.from({ length: count }, (_, index) => ({ ...stage,
       holders: stage.copyHolders?.[index] ?? stage.holders,
       id: index === 0 ? stage.id : `${stage.id}-copy-${index + 1}`,
       name: count === 1 ? stage.name : `${stage.name} ${index + 1}`,
     }));
+    const bridges: LayoutStage[] = Array.from({ length: stage.looseBridges ?? 0 }, (_, index) => ({
+      id: `${stage.id}-bridge-${index + 1}`, name: `${stage.name} bridge ${index + 1}`,
+      width: 4, length: 8, heightIn: stage.heightIn, valid: true,
+      decks: [{ x: 0, y: 0, w: 4, h: 8, isBridge: true }], holders: [],
+    }));
+    return [...copies, ...bridges];
   });
 
   // Persist which stages are enabled and the event name across reloads.
