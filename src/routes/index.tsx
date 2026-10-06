@@ -935,7 +935,6 @@ function StagePanel({
 
 
 
-  const legHeightIn = Math.max(heightIn - DECK_THICKNESS_IN, 0);
   useEffect(() => {
     onLayoutChange?.({
       id: stageId, name: displayTitle, width, length, heightIn, quantity: stageQuantity,
