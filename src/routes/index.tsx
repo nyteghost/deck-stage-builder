@@ -729,6 +729,8 @@ function StagePanel({
     nx: number;
     ny: number;
     moved: boolean;
+    cx?: number;
+    cy?: number;
   } | null>(null);
   const suppressClick = useRef(false);
 
@@ -750,16 +752,25 @@ function StagePanel({
     if (!manual || tool.kind === "erase") return;
     const { fx, fy } = toFeet(e);
     const hit = pieceAtPoint(pieces, fx, fy);
-    if (!hit) return;
+    if (!hit) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setDrag({ id: "__new", sx: fx, sy: fy, nx: 0, ny: 0, moved: false, cx: fx, cy: fy });
+      return;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
     setDrag({ id: hit.id, sx: fx, sy: fy, nx: hit.x, ny: hit.y, moved: false });
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!drag) return;
+    const { fx, fy } = toFeet(e);
+    if (drag.id === "__new") {
+      const moved = drag.moved || Math.hypot(fx - drag.sx, fy - drag.sy) > 0.5;
+      setDrag({ ...drag, cx: fx, cy: fy, moved });
+      return;
+    }
     const p = pieces.find((q) => q.id === drag.id);
     if (!p) return;
-    const { fx, fy } = toFeet(e);
     const { nx, ny } = dragTarget(p, drag, fx, fy);
     const moved = drag.moved || Math.hypot(fx - drag.sx, fy - drag.sy) > 0.5;
     if (nx !== drag.nx || ny !== drag.ny || moved !== drag.moved)
@@ -772,6 +783,10 @@ function StagePanel({
     setDrag(null);
     if (!d.moved) return;
     suppressClick.current = true;
+    if (d.id === "__new") {
+      placeAt(d.cx ?? d.sx, d.cy ?? d.sy);
+      return;
+    }
     const p = pieces.find((q) => q.id === d.id);
     if (!p || (p.x === d.nx && p.y === d.ny)) return;
     const moved = { ...p, x: d.nx, y: d.ny };
@@ -799,6 +814,12 @@ function StagePanel({
 
   const dragGhost = (() => {
     if (!drag || !drag.moved) return null;
+    if (drag.id === "__new") {
+      if (tool.kind === "erase") return null;
+      const { w, h } = pieceFootprint(tool.kind, tool.capacity, axis);
+      const o = snapOrigin(drag.cx ?? drag.sx, drag.cy ?? drag.sy, axis);
+      return { id: "__new", kind: tool.kind, capacity: tool.kind === "bridge" ? 1 : tool.capacity, axis, x: o.x, y: o.y, w, h } as ManualPiece;
+    }
     const p = pieces.find((q) => q.id === drag.id);
     return p ? { ...p, x: drag.nx, y: drag.ny } : null;
   })();
@@ -810,9 +831,10 @@ function StagePanel({
       return;
     }
     const rect = e.currentTarget.getBoundingClientRect();
-    const fx = (e.clientX - rect.left) / scale;
-    const fy = (e.clientY - rect.top) / scale;
+    placeAt((e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale);
+  };
 
+  const placeAt = (fx: number, fy: number) => {
     if (tool.kind === "erase") {
       const hit = pieceAtPoint(pieces, fx, fy);
       if (hit) {
