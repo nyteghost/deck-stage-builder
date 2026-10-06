@@ -1755,7 +1755,7 @@ function Index() {
           Print stages side by side
         </button>
 
-        {stageCount > 1 && (
+        {enabledIndexes.length > 1 && (
           <button
             type="button"
             onClick={() => setRebuildKey((k) => k + 1)}
@@ -1889,6 +1889,7 @@ function Index() {
                     window.localStorage.removeItem(APP_STORE_KEY);
                     skipAppSave.current = true;
                     setUsedByStage([]);
+                    setRemovedIndexes([]);
                     setStageCount(1);
                     setEventName("");
                     setEventNameDraft("");
