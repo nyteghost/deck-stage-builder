@@ -1619,11 +1619,12 @@ function Index() {
     writeStored(APP_STORE_KEY, { stageCount, eventName });
   }, [stageCount, eventName]);
 
-  // remainingAfter[i] = stock left once stages 1..i+1 have taken their share.
-  const remainingAfter = useMemo<Stock[]>(() => {
-    const out: Stock[] = [];
+  // Chain stock only through the stages that are still enabled, in order.
+  const { remainingBefore, remainingFinal } = useMemo(() => {
+    const before = new Map<number, Stock>();
     let current = FULL_STOCK;
-    for (let i = 0; i < 10; i += 1) {
+    for (const i of enabledIndexes) {
+      before.set(i, current);
       const used = usedByStage[i] ?? { decks: 0, one: 0, two: 0, three: 0 };
       current = {
         decks: Math.max(0, current.decks - used.decks),
@@ -1634,11 +1635,25 @@ function Index() {
         s6: Math.max(0, (current.s6 ?? 0) - (used.s6 ?? 0)),
         s7: Math.max(0, (current.s7 ?? 0) - (used.s7 ?? 0)),
       };
-      out.push(current);
     }
-    return out;
-  }, [usedByStage]);
-  const remainingFinal = remainingAfter[9];
+    return { remainingBefore: before, remainingFinal: current };
+  }, [usedByStage, enabledIndexes]);
+
+  // Remove one stage, free its inventory, and rebuild the stages that remain.
+  const removeStage = (index: number) => {
+    setRemovedIndexes((previous) => [...previous, index]);
+    setUsedByStage((previous) => {
+      const next = [...previous];
+      next[index] = { decks: 0, one: 0, two: 0, three: 0 };
+      return next;
+    });
+    setLayoutStages((previous) => {
+      const next = { ...previous };
+      delete next[`s${index + 1}`];
+      return next;
+    });
+    setRebuildKey((k) => k + 1);
+  };
   const totalUsed = useMemo<Stock>(
     () => ({
       decks: FULL_STOCK.decks - remainingFinal.decks,
