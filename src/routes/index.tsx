@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StageLayout, type LayoutStage } from "@/components/stage-layout";
+import { allocateSingleDeckStages } from "@/lib/single-deck-allocation";
 
 
 
@@ -28,6 +29,7 @@ type Holder = {
   w: number;
   h: number;
   capacity: 1 | 2 | 3;
+  decksUsed?: number;
   label: string; // e.g. "H1"
 };
 type Bridge = {
@@ -153,6 +155,13 @@ function planStage(
   stock: Stock = FULL_STOCK,
   prefs: PlanPrefs = DEFAULT_PREFS,
 ): Result {
+  if ((widthFt === 4 && lengthFt === 8) || (widthFt === 8 && lengthFt === 4)) {
+    const allocation = allocateSingleDeckStages(1, stock, prefs.allowTwo);
+    const capacity = allocation?.capacities[0];
+    if (!capacity) return { ok: false, reason: "No deck or eligible holder remains for this single-deck stage." };
+    return { ok: true, decks: [{ x: 0, y: 0, w: widthFt, h: lengthFt }],
+      holders: [{ x: 0, y: 0, w: widthFt, h: lengthFt, capacity, decksUsed: 1, label: "H1" }], bridges: [] };
+  }
   if (widthFt <= 0 || lengthFt <= 0) {
     return { ok: false, reason: "Enter a width and length greater than zero." };
   }
@@ -642,12 +651,20 @@ function StagePanel({
     [manual, pieces, width, length, autoResult],
   );
 
+  const singleAllocation = useMemo(() => isSingleDeckStage
+    ? allocateSingleDeckStages(stageQuantity, stock, allowTwo) : null,
+    [isSingleDeckStage, stageQuantity, stock, allowTwo]);
   const result = useMemo<Result>(() => {
-    if (isSingleDeckStage && stageQuantity > Math.min(stock.decks, stock.one)) {
-      return { ok: false, reason: `These ${stageQuantity} stages need ${stageQuantity} decks and ${stageQuantity} single-deck holders. Only ${stock.decks} decks and ${stock.one} single-deck holders remain.` };
+    if (!isSingleDeckStage) return singleResult;
+    if (!singleAllocation) {
+      return { ok: false, reason: `These ${stageQuantity} stages need ${stageQuantity} decks and one holder per stage. Only ${stock.decks} decks, ${stock.one} single-deck holders, ${allowTwo ? stock.two : 0} eligible 2-deck holders and ${stock.three} 3-deck holders remain.` };
+    }
+    if (singleResult.ok && singleResult.decks.length === 1 && singleResult.holders.length === 1) {
+      return { ...singleResult, holders: singleResult.holders.map(h => ({ ...h,
+        capacity: singleAllocation.capacities[0] ?? h.capacity, decksUsed: 1 })) };
     }
     return singleResult;
-  }, [isSingleDeckStage, stageQuantity, stock.decks, stock.one, singleResult]);
+  }, [isSingleDeckStage, stageQuantity, stock, allowTwo, singleAllocation, singleResult]);
 
   // Keep stage settings (width/length/height/name/etc.) saved so nothing wipes
   // them — not the rebuild button, a page reload, or a component remount.
@@ -860,6 +877,7 @@ function StagePanel({
 
   const usage = useMemo<Stock>(() => {
     if (!result.ok) return { decks: 0, one: 0, two: 0, three: 0 };
+    if (singleAllocation && result.decks.length === 1 && result.holders.length === 1) return singleAllocation.usage;
     const u = { decks: result.decks.length, one: 0, two: 0, three: 0 };
     for (const h of result.holders) {
       if (h.capacity === 1) u.one++;
@@ -867,7 +885,7 @@ function StagePanel({
       if (h.capacity === 3) u.three++;
     }
     return { decks: u.decks * stageQuantity, one: u.one * stageQuantity, two: u.two * stageQuantity, three: u.three * stageQuantity };
-  }, [result, stageQuantity]);
+  }, [result, stageQuantity, singleAllocation]);
 
   useEffect(() => {
     onUsage?.(usage);
@@ -888,8 +906,10 @@ function StagePanel({
       valid: result.ok && !result.holderError,
       decks: result.ok ? result.decks : [],
       holders: result.ok ? result.holders : [],
+      copyHolders: result.ok && singleAllocation && result.decks.length === 1 && result.holders.length === 1
+        ? singleAllocation.capacities.map(capacity => result.holders.map(h => ({ ...h, capacity }))) : undefined,
     });
-  }, [stageId, displayTitle, width, length, heightIn, stageQuantity, result, onLayoutChange]);
+  }, [stageId, displayTitle, width, length, heightIn, stageQuantity, result, singleAllocation, onLayoutChange]);
 
 
   return (
@@ -1165,15 +1185,7 @@ function StagePanel({
                   (() => {
                     const count = result.decks.length * stageQuantity;
                     const overDecks = count > stock.decks;
-                    const totals = result.holders.reduce(
-                      (acc, h) => {
-                        if (h.capacity === 1) acc.one++;
-                        if (h.capacity === 2) acc.two++;
-                        if (h.capacity === 3) acc.three++;
-                        return acc;
-                      },
-                      { one: 0, two: 0, three: 0 },
-                    );
+                    const totals = usage;
                     return (
                       <>
                         <div className="flex justify-between py-0.5">
@@ -1189,9 +1201,10 @@ function StagePanel({
                           </span>
                         </div>
                         <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                          <div>{totals.three * stageQuantity}× 3-deck holder (12&#39;×8&#39;)</div>
-                          <div>{totals.two * stageQuantity}× 2-deck holder (8&#39;×8&#39;)</div>
-                          <div>{totals.one * stageQuantity}× 1-deck holder (4&#39;×8&#39;)</div>
+                          <div>{totals.three}× 3-deck holder</div>
+                          <div>{totals.two}× 2-deck holder</div>
+                          <div>{totals.one}× 1-deck holder</div>
+                          {singleAllocation && (usage.two > 0 || usage.three > 0) && <div className="font-medium text-foreground">Larger holders used with one deck each: {usage.two}× 2-deck, {usage.three}× 3-deck.</div>}
                           <div>{result.bridges.length * stageQuantity}× bridge deck (4&#39;×8&#39;)</div>
                         </div>
                         {result.holderError && (
@@ -1351,15 +1364,15 @@ function StagePanel({
                         <span className="font-medium">{result.bridges.length}</span>
                         <span>3-deck holders:</span>
                         <span className="font-medium">
-                          {result.holders.filter((h) => h.capacity === 3).length * stageQuantity}
+                          {usage.three}
                         </span>
                         <span>2-deck holders:</span>
                         <span className="font-medium">
-                          {result.holders.filter((h) => h.capacity === 2).length * stageQuantity}
+                          {usage.two}
                         </span>
                         <span>1-deck holders:</span>
                         <span className="font-medium">
-                          {result.holders.filter((h) => h.capacity === 1).length * stageQuantity}
+                          {usage.one}
                         </span>
                       </div>
                     </div>
@@ -1407,7 +1420,7 @@ function StagePanel({
                           {h.label}
                         </td>
                         <td className="py-2 pr-3">{h.capacity}-deck</td>
-                        <td className="py-2 pr-3">{h.capacity}</td>
+                        <td className="py-2 pr-3">{h.decksUsed ?? h.capacity}</td>
                         <td className="py-2 pr-3">{h.w}&#39; × {h.h}&#39;</td>
                         <td className="py-2 pr-3">({h.x}, {h.y})</td>
                         <td className="py-2 pr-3">
@@ -1493,6 +1506,7 @@ function Index() {
     const parsed = stageQuantitySchema.safeParse(stage.quantity ?? 1);
     const count = parsed.success ? parsed.data : 1;
     return Array.from({ length: count }, (_, index) => ({ ...stage,
+      holders: stage.copyHolders?.[index] ?? stage.holders,
       id: index === 0 ? stage.id : `${stage.id}-copy-${index + 1}`,
       name: count === 1 ? stage.name : `${stage.name} ${index + 1}`,
     }));
