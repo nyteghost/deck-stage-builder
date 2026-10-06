@@ -1,4 +1,5 @@
 # Architecture rules
 - Individual stage panels publish browser-safe drawing snapshots to the parent, which passes only enabled stages to the separate whole-stage layout editor; this keeps arrangement independent from deck planning and shared inventory.
 - Whole-stage layout positions are in feet and use pointer capture with one-foot snapping and non-overlapping drops; this keeps mouse, touch, and keyboard positioning consistent without altering stage dimensions.
+- Single-deck layout rotation transforms each copy's drawing and collision footprint locally, preserving the stage-panel dimensions and shared inventory; this keeps orientation independent of deck planning.
 - Single-deck stage quantities use a browser-safe per-copy holder allocation; summaries and remaining inventory use actual holder types, and snapshots expand into stable copy IDs with their assigned holders so each copy moves independently without inventing inventory.
