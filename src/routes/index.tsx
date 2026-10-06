@@ -68,7 +68,7 @@ const BRIDGE_COLOR = "rgba(234, 179, 8, 0.95)"; // yellow
 const DECK_THICKNESS_IN = 4; // typical stage deck panel thickness
 const MIN_HEIGHT_IN = 32;
 const MAX_HEIGHT_IN = 44;
-const HEIGHT_PRESETS = [32, 36, 40, 44];
+const HEIGHT_PRESETS = [32, 34, 36, 38, 40, 42, 44];
 
 // ---------- persisted stage settings (survive rebuilds, remounts, reloads) ----------
 const STAGE_STORE_KEY = "stage-planner:stages";
