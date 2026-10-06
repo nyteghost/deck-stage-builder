@@ -587,9 +587,12 @@ function StagePanel({
 
   const [mostlyThree, setMostlyThree] = useState(false);
   const [allowTwo, setAllowTwo] = useState(true);
+  const [planNonce, setPlanNonce] = useState(0);
   const autoResult = useMemo(
     () => planStage(width, length, stock, { mostlyThree, allowTwo }),
-    [width, length, stock, mostlyThree, allowTwo],
+    // planNonce forces a full re-plan when "Rebuild all stages" is pressed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [width, length, stock, mostlyThree, allowTwo, planNonce],
   );
   const result = useMemo(
     () => (manual ? manualResult(pieces, width, length) : autoResult),
