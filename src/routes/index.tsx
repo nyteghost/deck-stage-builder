@@ -1527,6 +1527,42 @@ function Index() {
     }),
     [remaining, used2],
   );
+  const remaining4 = useMemo<Stock>(
+    () => ({
+      decks: Math.max(0, remaining3.decks - used3.decks),
+      one: Math.max(0, remaining3.one - used3.one),
+      two: Math.max(0, remaining3.two - used3.two),
+      three: Math.max(0, remaining3.three - used3.three),
+    }),
+    [remaining3, used3],
+  );
+  const remaining5 = useMemo<Stock>(
+    () => ({
+      decks: Math.max(0, remaining4.decks - used4.decks),
+      one: Math.max(0, remaining4.one - used4.one),
+      two: Math.max(0, remaining4.two - used4.two),
+      three: Math.max(0, remaining4.three - used4.three),
+    }),
+    [remaining4, used4],
+  );
+  const remainingFinal = useMemo<Stock>(
+    () => ({
+      decks: Math.max(0, remaining5.decks - used5.decks),
+      one: Math.max(0, remaining5.one - used5.one),
+      two: Math.max(0, remaining5.two - used5.two),
+      three: Math.max(0, remaining5.three - used5.three),
+    }),
+    [remaining5, used5],
+  );
+  const totalUsed = useMemo<Stock>(
+    () => ({
+      decks: FULL_STOCK.decks - remainingFinal.decks,
+      one: FULL_STOCK.one - remainingFinal.one,
+      two: FULL_STOCK.two - remainingFinal.two,
+      three: FULL_STOCK.three - remainingFinal.three,
+    }),
+    [remainingFinal],
+  );
 
 
   return (
