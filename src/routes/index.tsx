@@ -1802,7 +1802,7 @@ function Index() {
           {showLayout ? "Hide Layout view" : "Show Layout view"}
         </button>
 
-        <div className={showLayout ? "" : "hidden"}>
+        <div className={`layout-view-swap${showLayout ? "" : " hidden"}`}>
           <StageLayout stages={activeLayoutStages} />
         </div>
 
