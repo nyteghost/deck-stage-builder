@@ -1504,15 +1504,22 @@ function StagePanel({
 function Index() {
   const [stageCount, setStageCount] = useState(1);
   const [usedByStage, setUsedByStage] = useState<Stock[]>([]);
-  const setUsedFor = useCallback(
-    (index: number) => (stock: Stock) =>
-      setUsedByStage((previous) => {
-        const next = [...previous];
-        next[index] = stock;
-        return next;
-      }),
-    [],
-  );
+  // Stable per-stage usage callbacks: StagePanel's effect depends on onUsage,
+  // so each index must keep the same function identity across renders.
+  const usedCallbacks = useRef(new Map<number, (stock: Stock) => void>());
+  const setUsedFor = (index: number) => {
+    let cb = usedCallbacks.current.get(index);
+    if (!cb) {
+      cb = (stock: Stock) =>
+        setUsedByStage((previous) => {
+          const next = [...previous];
+          next[index] = stock;
+          return next;
+        });
+      usedCallbacks.current.set(index, cb);
+    }
+    return cb;
+  };
   const [rebuildKey, setRebuildKey] = useState(0);
   const [eventName, setEventName] = useState("");
   const [eventNameDraft, setEventNameDraft] = useState("");
