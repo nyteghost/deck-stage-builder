@@ -1524,6 +1524,8 @@ function Index() {
   const [eventName, setEventName] = useState("");
   const [eventNameDraft, setEventNameDraft] = useState("");
   const [showEventModal, setShowEventModal] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearKey, setClearKey] = useState(0);
   const [layoutStages, setLayoutStages] = useState<Record<string, LayoutStage>>({});
   const handleLayoutChange = useCallback((stage: LayoutStage) => {
     setLayoutStages(previous => ({ ...previous, [stage.id]: stage }));
