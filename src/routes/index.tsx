@@ -618,9 +618,12 @@ function StagePanel({
       firstRebuild.current = false;
       return;
     }
+    // Erase everything on this stage (hand-placed and auto pieces) and re-plan.
     setManual(false);
+    setPieces([]);
     setPlaceError(null);
     setDrag(null);
+    setPlanNonce((n) => n + 1);
   }, [rebuildKey]);
 
   const [drag, setDrag] = useState<{
