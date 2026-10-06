@@ -1521,10 +1521,7 @@ function Index() {
   const handleLayoutChange = useCallback((stage: LayoutStage) => {
     setLayoutStages(previous => ({ ...previous, [stage.id]: stage }));
   }, []);
-  const enabledIds = ["s1", ...(showSecond ? ["s2"] : []),
-    ...(showSecond && showThird ? ["s3"] : []),
-    ...(showSecond && showThird && showFourth ? ["s4"] : []),
-    ...(showSecond && showThird && showFourth && showFifth ? ["s5"] : [])];
+  const enabledIds = Array.from({ length: stageCount }, (_, i) => `s${i + 1}`);
   const activeLayoutStages = enabledIds.flatMap(id => {
     const stage = layoutStages[id];
     if (!stage) return [];
