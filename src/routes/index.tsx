@@ -1231,7 +1231,6 @@ function StagePanel({
                     const totals = usage;
                     return (
                       <>
-                        <></>
                         <div className="mt-2 flex justify-between border-t border-border pt-2">
                           <span className="text-muted-foreground">Decks required</span>
                           <span className={`font-semibold ${overDecks ? "text-destructive" : ""}`}>
