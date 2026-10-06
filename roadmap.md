@@ -3,4 +3,4 @@
 - [x] Remove side views and add a draggable whole-stage layout view for all enabled stages
 - [x] Add a quantity for 4×8 stages, independent layout copies, and shared inventory validation
 - [x] Use spare larger holders for single-deck stages when single-deck holders run out, with accurate counts and copy labels
-- [ ] Rotate individual single-deck stages in Layout view without changing inventory
+- [x] Rotate individual single-deck stages in Layout view without changing inventory
