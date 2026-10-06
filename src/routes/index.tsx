@@ -1682,6 +1682,14 @@ function Index() {
           </button>
         )}
 
+        <button
+          type="button"
+          onClick={() => setShowClearModal(true)}
+          className="no-print mb-6 ml-3 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-muted"
+        >
+          Clear all stages
+        </button>
+
         <StageLayout stages={activeLayoutStages} />
 
         <div className="print-grid">
