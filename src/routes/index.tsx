@@ -1600,6 +1600,25 @@ function Index() {
   const [eventNameDraft, setEventNameDraft] = useState("");
   const [showEventModal, setShowEventModal] = useState(false);
 
+  // Persist which stages are enabled and the event name across reloads.
+  const skipAppSave = useRef(true);
+  useEffect(() => {
+    const s = readStored<SavedApp>(APP_STORE_KEY, {});
+    if (typeof s.showSecond === "boolean") setShowSecond(s.showSecond);
+    if (typeof s.showThird === "boolean") setShowThird(s.showThird);
+    if (typeof s.showFourth === "boolean") setShowFourth(s.showFourth);
+    if (typeof s.showFifth === "boolean") setShowFifth(s.showFifth);
+    if (typeof s.eventName === "string") setEventName(s.eventName);
+    skipAppSave.current = true;
+  }, []);
+  useEffect(() => {
+    if (skipAppSave.current) {
+      skipAppSave.current = false;
+      return;
+    }
+    writeStored(APP_STORE_KEY, { showSecond, showThird, showFourth, showFifth, eventName });
+  }, [showSecond, showThird, showFourth, showFifth, eventName]);
+
   const remaining = useMemo<Stock>(
     () => ({
       decks: Math.max(0, FULL_STOCK.decks - used1.decks),
