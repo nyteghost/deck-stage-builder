@@ -10,6 +10,7 @@ export type LayoutStage = {
   heightIn: number;
   valid: boolean;
   quantity?: number;
+  copyHolders?: LayoutStage["holders"][];
   decks: { x: number; y: number; w: number; h: number; isBridge?: boolean }[];
   holders: { x: number; y: number; w: number; h: number; capacity: 1 | 2 | 3 }[];
 };
