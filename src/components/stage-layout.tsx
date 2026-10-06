@@ -181,8 +181,15 @@ export function StageLayout({ stages: sourceStages }: { stages: LayoutStage[] })
               <rect width={stage.width} height={stage.length} className="print-layout-outline" />
               {stage.decks.map((deck, deckIndex) => <rect key={deckIndex} x={deck.x} y={deck.y} width={deck.w} height={deck.h}
                 className={deck.isBridge ? "layout-bridge" : "layout-deck"} strokeWidth={0.7} vectorEffect="non-scaling-stroke" />)}
-              {stage.holders.map((holder, holderIndex) => <rect key={holderIndex} x={holder.x} y={holder.y} width={holder.w} height={holder.h}
-                className={`layout-holder layout-holder-${holder.capacity}`} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />)}
+              {stage.holders.map((holder, holderIndex) => {
+                const holderTextSize = Math.min(1.3, holder.w / 6, holder.h / 3);
+                return <g key={holderIndex}>
+                  <rect x={holder.x} y={holder.y} width={holder.w} height={holder.h}
+                    className={`layout-holder layout-holder-${holder.capacity}`} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                  <text x={holder.x + holder.w / 2} y={holder.y + holder.h / 2} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={holderTextSize} className="print-layout-number">{stage.heightIn}&quot; high</text>
+                </g>;
+              })}
               <text x={stage.width / 2} y={stage.length / 2} textAnchor="middle" dominantBaseline="middle"
                 fontSize={labelSize} className="print-layout-number">{index + 1}</text>
             </g>;
