@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Move, RotateCcw } from "lucide-react";
+import { Move, RotateCcw, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type LayoutStage = {
@@ -16,7 +16,17 @@ export type LayoutStage = {
 };
 type Position = { x: number; y: number };
 
-export function StageLayout({ stages }: { stages: LayoutStage[] }) {
+export function StageLayout({ stages: sourceStages }: { stages: LayoutStage[] }) {
+  const [rotations, setRotations] = useState<Record<string, boolean>>({});
+  const stages = useMemo(() => sourceStages.map(stage => {
+    const singleDeck = stage.decks.length === 1 && stage.width * stage.length === 32;
+    if (!rotations[stage.id] || !singleDeck) return stage;
+    const turn = <T extends { x: number; y: number; w: number; h: number }>(piece: T): T => ({
+      ...piece, x: stage.length - piece.y - piece.h, y: piece.x, w: piece.h, h: piece.w,
+    });
+    return { ...stage, width: stage.length, length: stage.width,
+      decks: stage.decks.map(turn), holders: stage.holders.map(turn) };
+  }), [sourceStages, rotations]);
   const [positions, setPositions] = useState<Record<string, Position>>({});
   const [selectedId, setSelectedId] = useState("s1");
   const [zoom, setZoom] = useState(8);
@@ -50,6 +60,20 @@ export function StageLayout({ stages }: { stages: LayoutStage[] }) {
     setError("");
     return true;
   };
+  const canRotate = selected?.valid && selected.decks.length === 1 && selected.width * selected.length === 32;
+  const rotateSelected = () => {
+    if (!selected || !canRotate) return;
+    const position = positionOf(selected.id);
+    const turned = { ...selected, width: selected.length, length: selected.width };
+    if (overlaps(turned, position)) {
+      setError(`${selected.name} would overlap another stage after rotation. Move it to an open position first.`);
+      return;
+    }
+    // Freeze positions before rotation changes the default row spacing.
+    setPositions(Object.fromEntries(stages.map(stage => [stage.id, positionOf(stage.id)])));
+    setRotations(previous => ({ ...previous, [selected.id]: !previous[selected.id] }));
+    setError("");
+  };
 
   return (
     <section className="no-print mb-10" aria-labelledby="layout-title">
@@ -61,8 +85,10 @@ export function StageLayout({ stages }: { stages: LayoutStage[] }) {
             <input aria-label="Layout zoom" type="range" min={4} max={16} value={zoom}
               onChange={event => setZoom(Number(event.target.value))} className="w-24 accent-primary" />
           </label>
+          <Button variant="outline" size="icon" title="Rotate selected single-deck stage 90°" aria-label="Rotate selected single-deck stage 90°"
+            disabled={!canRotate} onClick={rotateSelected}><RotateCw /></Button>
           <Button variant="outline" size="icon" title="Reset stage positions" aria-label="Reset stage positions"
-            onClick={() => { setPositions({}); setError(""); }}><RotateCcw /></Button>
+            onClick={() => { setPositions({}); setRotations({}); setError(""); }}><RotateCcw /></Button>
         </div>
       </div>
       <div className="overflow-auto rounded-md border border-border bg-muted/30" style={{ maxHeight: 580 }}>
@@ -74,7 +100,7 @@ export function StageLayout({ stages }: { stages: LayoutStage[] }) {
             const isSelected = selected?.id === stage.id;
             return (
               <Button key={stage.id} variant="outline" aria-label={`Move ${stage.name}`} aria-pressed={isSelected}
-                data-stage-id={stage.id} data-x={position.x} data-y={position.y}
+                data-stage-id={stage.id} data-x={position.x} data-y={position.y} data-rotated={!!rotations[stage.id]}
                 title={`${stage.name}: ${stage.width} × ${stage.length} ft, ${stage.heightIn} in high`}
                 className={`absolute block touch-none select-none overflow-hidden rounded-none p-0 shadow-none cursor-grab active:cursor-grabbing [&_svg]:size-full ${isSelected ? "z-10 ring-2 ring-ring ring-offset-2 ring-offset-background" : ""} ${!stage.valid ? "border-dashed border-destructive" : "border-foreground"}`}
                 style={{ left: position.x * zoom, top: position.y * zoom, width: stage.width * zoom, height: stage.length * zoom }}
