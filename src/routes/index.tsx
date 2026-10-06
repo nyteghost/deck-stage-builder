@@ -1045,55 +1045,25 @@ function StagePanel({
               )}
 
               <div>
-                <label className="block text-sm font-medium">
-                  Stage height (in){" "}
-                  <span className="font-normal text-muted-foreground">— {MIN_HEIGHT_IN}&quot;–{MAX_HEIGHT_IN}&quot;</span>
+                <label htmlFor={`${stageId}-height`} className="block text-sm font-medium">
+                  Stage height (in)
                 </label>
-                <input
-                  type="number"
-                  min={MIN_HEIGHT_IN}
-                  max={MAX_HEIGHT_IN}
-                  step={1}
-                  value={heightText}
+                <select
+                  id={`${stageId}-height`}
+                  value={heightIn}
                   onChange={(e) => {
-                    const t = e.target.value;
-                    setHeightText(t);
-                    const n = Number(t);
-                    if (t !== "" && Number.isFinite(n) && n >= MIN_HEIGHT_IN && n <= MAX_HEIGHT_IN) {
-                      setHeightIn(n);
-                    }
-                  }}
-                  onBlur={() => {
-                    const n = Number(heightText);
-                    const clamped = !Number.isFinite(n)
-                      ? heightIn
-                      : Math.min(MAX_HEIGHT_IN, Math.max(MIN_HEIGHT_IN, Math.round(n)));
-                    setHeightIn(clamped);
-                    setHeightText(String(clamped));
+                    const n = Number(e.target.value);
+                    setHeightIn(n);
+                    setHeightText(String(n));
                   }}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {HEIGHT_PRESETS.map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => {
-                        setHeightIn(h);
-                        setHeightText(String(h));
-                      }}
-
-                      className={`rounded-md border px-2 py-1 text-xs transition-colors ${
-                        heightIn === h
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
+                >
+                  {(HEIGHT_PRESETS.includes(heightIn) ? HEIGHT_PRESETS : [heightIn, ...HEIGHT_PRESETS].sort((a, b) => a - b)).map((h) => (
+                    <option key={h} value={h}>
                       {h}&quot;
-                    </button>
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
 
               <div className="rounded-md border border-border p-3">
