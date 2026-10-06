@@ -1776,15 +1776,16 @@ function Index() {
         <StageLayout stages={activeLayoutStages} />
 
         <div className="print-grid">
-        {enabledIds.map((id, i) => {
-          const n = i + 1;
-          const stock = i === 0 ? undefined : remainingAfter[i - 1];
+        {enabledIndexes.map((i, position) => {
+          const id = `s${i + 1}`;
+          const n = position + 1;
+          const stock = position === 0 ? undefined : remainingBefore.get(i);
           return (
             <div key={`${id}-${clearKey}`}>
-              {i > 0 && stock && (
+              {position > 0 && stock && (
                 <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
                   <div className="font-semibold">
-                    Left for Stage {n} after {i === 1 ? "Stage 1" : `Stages 1–${i}`}
+                    Left for Stage {n} after {position === 1 ? "Stage 1" : `Stages 1–${position}`}
                   </div>
                   <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
                     <div>{stock.decks} decks</div>
@@ -1794,13 +1795,22 @@ function Index() {
                   </div>
                 </div>
               )}
+              <div className="no-print mb-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => removeStage(i)}
+                  className="rounded-md border border-border bg-card px-3 py-1 text-xs font-medium text-destructive shadow-sm hover:bg-muted"
+                >
+                  Remove stage
+                </button>
+              </div>
               <StagePanel
                 stageId={id}
                 onLayoutChange={handleLayoutChange}
-                title={stageCount > 1 ? `Stage ${n}` : "Stage"}
-                defaultWidth={n === 1 ? 24 : n === 2 ? 16 : 8}
-                defaultLength={n <= 2 ? (n === 1 ? 16 : 8) : 8}
-                labelPrefix={n === 1 ? undefined : `S${n}-`}
+                title={enabledIndexes.length > 1 ? `Stage ${n}` : "Stage"}
+                defaultWidth={i === 0 ? 24 : i === 1 ? 16 : 8}
+                defaultLength={i <= 1 ? (i === 0 ? 16 : 8) : 8}
+                labelPrefix={i === 0 ? undefined : `S${i + 1}-`}
                 stock={stock}
                 onUsage={setUsedFor(i)}
                 rebuildKey={rebuildKey}
