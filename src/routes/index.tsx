@@ -1576,6 +1576,28 @@ function Index() {
           </p>
         </header>
 
+        <div className="no-print mb-6 rounded-md border border-border bg-card p-4 text-sm shadow-sm">
+          <div className="font-semibold">Total inventory (all stages)</div>
+          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-4">
+            <div>
+              <span className="text-muted-foreground">Decks: </span>
+              {totalUsed.decks} used / {remainingFinal.decks} left
+            </div>
+            <div>
+              <span className="text-muted-foreground">3-deck holders: </span>
+              {totalUsed.three} used / {remainingFinal.three} left
+            </div>
+            <div>
+              <span className="text-muted-foreground">2-deck holders: </span>
+              {totalUsed.two} used / {remainingFinal.two} left
+            </div>
+            <div>
+              <span className="text-muted-foreground">1-deck holders: </span>
+              {totalUsed.one} used / {remainingFinal.one} left
+            </div>
+          </div>
+        </div>
+
         <div className="print-only mb-6">
           <h1 className="text-3xl font-bold tracking-tight">
             {eventName.trim() || "Stage Deck Planner"}
