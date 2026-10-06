@@ -83,7 +83,10 @@ type ElevationSegment = {
  * Ways to cut a run of `r` adjacent decks into holders of 1/2/3 decks,
  * preferred order: fewest 1-deck holders, then fewest holders overall.
  */
-function runOptions(r: number): { three: number; two: number; one: number }[] {
+type PlanPrefs = { mostlyThree: boolean; allowTwo: boolean };
+const DEFAULT_PREFS: PlanPrefs = { mostlyThree: false, allowTwo: true };
+
+function runOptions(r: number, mostlyThree = false): { three: number; two: number; one: number }[] {
   const opts: { three: number; two: number; one: number }[] = [];
   for (let c3 = Math.floor(r / 3); c3 >= 0; c3--) {
     for (let c2 = Math.floor((r - 3 * c3) / 2); c2 >= 0; c2--) {
@@ -92,7 +95,11 @@ function runOptions(r: number): { three: number; two: number; one: number }[] {
       opts.push({ three: c3, two: c2, one: c1 });
     }
   }
-  opts.sort((p, q) => (p.one - q.one) || (p.three + p.two + p.one - (q.three + q.two + q.one)));
+  opts.sort((p, q) =>
+    mostlyThree
+      ? (p.one - q.one) || (q.three - p.three)
+      : (p.one - q.one) || (p.three + p.two + p.one - (q.three + q.two + q.one)),
+  );
   return opts;
 }
 
@@ -105,7 +112,12 @@ const FULL_STOCK: Stock = {
   three: INVENTORY.holders.three.count,
 };
 
-function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK): Result {
+function planStage(
+  widthFt: number,
+  lengthFt: number,
+  stock: Stock = FULL_STOCK,
+  prefs: PlanPrefs = DEFAULT_PREFS,
+): Result {
   if (widthFt <= 0 || lengthFt <= 0) {
     return { ok: false, reason: "Enter a width and length greater than zero." };
   }
@@ -134,6 +146,7 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
     totalHolders: number;
     totalBridges: number;
     singles: number;
+    threes: number;
   };
 
   // A "pattern" decides which decks are carried as bridges instead of sitting
@@ -220,7 +233,7 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
     // ---- lay holders over the remaining runs ----
     const avail = {
       one: stock.one,
-      two: stock.two,
+      two: prefs.allowTwo ? stock.two : 0,
       three: stock.three,
     };
     type PH = { decks: Deck[]; axis: "x" | "y"; label: string };
@@ -228,6 +241,7 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
     const phs: PH[] = [];
     let holderError: string | undefined;
     let singles = 0;
+    let threes = 0;
 
     for (let s = 0; s < S; s++) {
       let p = 0;
@@ -236,7 +250,7 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
         let end = p;
         while (end < K && !isBridge[s][end]) end++;
         const run = strips[s].decks.slice(p, end);
-        const chosen = runOptions(run.length).find(
+        const chosen = runOptions(run.length, prefs.mostlyThree).find(
           (o) => o.three <= avail.three && o.two <= avail.two && o.one <= avail.one,
         );
         if (!chosen) {
@@ -248,6 +262,7 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
         avail.two -= chosen.two;
         avail.one -= chosen.one;
         singles += chosen.one;
+        threes += chosen.three;
         const sizes: (1 | 2 | 3)[] = [];
         for (let i = 0; i < chosen.three; i++) sizes.push(3);
         for (let i = 0; i < chosen.two; i++) sizes.push(2);
@@ -328,6 +343,7 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
       totalHolders: holders.length,
       totalBridges: bridges.length,
       singles,
+      threes,
     };
   }
 
@@ -356,6 +372,7 @@ function planStage(widthFt: number, lengthFt: number, stock: Stock = FULL_STOCK)
     const qe = q.holderError ? 1 : 0;
     if (pe !== qe) return pe - qe;
     if (p.totalBridges !== q.totalBridges) return q.totalBridges - p.totalBridges;
+    if (prefs.mostlyThree && p.threes !== q.threes) return q.threes - p.threes;
     if (p.singles !== q.singles) return p.singles - q.singles;
     return p.totalHolders - q.totalHolders;
   });
@@ -566,7 +583,12 @@ function StagePanel({
   const [placeError, setPlaceError] = useState<string | null>(null);
   const nextId = useRef(0);
 
-  const autoResult = useMemo(() => planStage(width, length, stock), [width, length, stock]);
+  const [mostlyThree, setMostlyThree] = useState(false);
+  const [allowTwo, setAllowTwo] = useState(true);
+  const autoResult = useMemo(
+    () => planStage(width, length, stock, { mostlyThree, allowTwo }),
+    [width, length, stock, mostlyThree, allowTwo],
+  );
   const result = useMemo(
     () => (manual ? manualResult(pieces, width, length) : autoResult),
     [manual, pieces, width, length, autoResult],
@@ -925,6 +947,27 @@ function StagePanel({
                   >
                     Place by hand
                   </button>
+                </div>
+
+                <div className="mt-3 space-y-1.5 text-xs">
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={mostlyThree}
+                      onChange={(e) => setMostlyThree(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    Use mostly 3-deck holders
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={allowTwo}
+                      onChange={(e) => setAllowTwo(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    Allow 2-deck holders
+                  </label>
                 </div>
 
                 {manual && (
