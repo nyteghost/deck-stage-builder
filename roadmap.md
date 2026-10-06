@@ -6,3 +6,4 @@
 - [x] Rotate individual single-deck stages in Layout view without changing inventory
 - [x] Print complete stage diagrams and summaries across pages
 - [x] Include current arranged and rotated Layout view in printing
+- [x] Include total decks and each holder type used across all stages in printing
