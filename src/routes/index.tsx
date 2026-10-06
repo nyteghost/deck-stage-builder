@@ -1589,7 +1589,7 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-5xl px-4 py-10">
+      <div className="print-document mx-auto max-w-5xl px-4 py-10">
         <header className="print-hide mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -3,3 +3,4 @@
 - Whole-stage layout positions are in feet and use pointer capture with one-foot snapping and non-overlapping drops; this keeps mouse, touch, and keyboard positioning consistent without altering stage dimensions.
 - Single-deck layout rotation transforms each copy's drawing and collision footprint locally, preserving the stage-panel dimensions and shared inventory; this keeps orientation independent of deck planning.
 - Single-deck stage quantities use a browser-safe per-copy holder allocation; summaries and remaining inventory use actual holder types, and snapshots expand into stable copy IDs with their assigned holders so each copy moves independently without inventing inventory.
+- Printing uses a fitted SVG of the live layout positions and rotations plus paginated two-column stage blocks; this preserves complete diagrams and summaries without relying on the scrollable editor viewport.
