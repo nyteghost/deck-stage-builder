@@ -935,7 +935,6 @@ function StagePanel({
 
 
 
-  const legHeightIn = Math.max(heightIn - DECK_THICKNESS_IN, 0);
   useEffect(() => {
     onLayoutChange?.({
       id: stageId, name: displayTitle, width, length, heightIn, quantity: stageQuantity,
@@ -1219,10 +1218,6 @@ function StagePanel({
                 <div className="flex justify-between py-0.5">
                   <span className="text-muted-foreground">Stage height</span>
                   <span className="font-medium">{heightIn}&quot;</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-muted-foreground">Leg height</span>
-                  <span className="font-medium">{legHeightIn}&quot; (+ {DECK_THICKNESS_IN}&quot; deck)</span>
                 </div>
                 {result.ok ? (
                   (() => {
