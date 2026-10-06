@@ -1,0 +1,141 @@
+import { useMemo, useRef, useState } from "react";
+import { Move, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+export type LayoutStage = {
+  id: string;
+  name: string;
+  width: number;
+  length: number;
+  heightIn: number;
+  valid: boolean;
+  decks: { x: number; y: number; w: number; h: number; isBridge?: boolean }[];
+  holders: { x: number; y: number; w: number; h: number; capacity: 1 | 2 | 3 }[];
+};
+type Position = { x: number; y: number };
+
+export function StageLayout({ stages }: { stages: LayoutStage[] }) {
+  const [positions, setPositions] = useState<Record<string, Position>>({});
+  const [selectedId, setSelectedId] = useState("s1");
+  const [zoom, setZoom] = useState(8);
+  const [error, setError] = useState("");
+  const drag = useRef<{ id: string; startX: number; startY: number; origin: Position } | null>(null);
+  const defaults = useMemo(() => {
+    let x = 4;
+    return Object.fromEntries(stages.map(stage => {
+      const position = { x, y: 4 };
+      x += stage.width + 4;
+      return [stage.id, position];
+    }));
+  }, [stages]);
+  const positionOf = (id: string): Position => positions[id] ?? defaults[id] ?? { x: 4, y: 4 };
+  const selected = stages.find(stage => stage.id === selectedId) ?? stages[0];
+  const worldWidth = Math.max(100, ...stages.map(stage => positionOf(stage.id).x + stage.width + 12));
+  const worldHeight = Math.max(64, ...stages.map(stage => positionOf(stage.id).y + stage.length + 12));
+  const overlaps = (stage: LayoutStage, position: Position) => stages.some(other => {
+    if (other.id === stage.id) return false;
+    const p = positionOf(other.id);
+    return position.x < p.x + other.width && position.x + stage.width > p.x &&
+      position.y < p.y + other.length && position.y + stage.length > p.y;
+  });
+  const moveStage = (stage: LayoutStage, position: Position) => {
+    const snapped = { x: Math.max(0, Math.round(position.x)), y: Math.max(0, Math.round(position.y)) };
+    if (overlaps(stage, snapped)) {
+      setError(`${stage.name} overlaps another stage. Choose an open position.`);
+      return false;
+    }
+    setPositions(previous => ({ ...previous, [stage.id]: snapped }));
+    setError("");
+    return true;
+  };
+
+  return (
+    <section className="no-print mb-10" aria-labelledby="layout-title">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 id="layout-title" className="text-lg font-semibold">Layout view</h2>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            Zoom
+            <input aria-label="Layout zoom" type="range" min={4} max={16} value={zoom}
+              onChange={event => setZoom(Number(event.target.value))} className="w-24 accent-primary" />
+          </label>
+          <Button variant="outline" size="icon" title="Reset stage positions" aria-label="Reset stage positions"
+            onClick={() => { setPositions({}); setError(""); }}><RotateCcw /></Button>
+        </div>
+      </div>
+      <div className="overflow-auto rounded-md border border-border bg-muted/30" style={{ maxHeight: 580 }}>
+        <div className="layout-workspace relative" aria-label="Stage layout canvas"
+          style={{ width: worldWidth * zoom, height: worldHeight * zoom, backgroundSize: `${4 * zoom}px ${4 * zoom}px` }}>
+          <span className="pointer-events-none absolute left-2 top-1 text-[10px] text-muted-foreground">0, 0 · feet</span>
+          {stages.map(stage => {
+            const position = positionOf(stage.id);
+            const isSelected = selected?.id === stage.id;
+            return (
+              <Button key={stage.id} variant="outline" aria-label={`Move ${stage.name}`} aria-pressed={isSelected}
+                data-stage-id={stage.id} data-x={position.x} data-y={position.y}
+                title={`${stage.name}: ${stage.width} × ${stage.length} ft, ${stage.heightIn} in high`}
+                className={`absolute block touch-none select-none overflow-hidden rounded-none p-0 shadow-none cursor-grab active:cursor-grabbing ${isSelected ? "z-10 ring-2 ring-ring ring-offset-2 ring-offset-background" : ""} ${!stage.valid ? "border-dashed border-destructive" : "border-foreground"}`}
+                style={{ left: position.x * zoom, top: position.y * zoom, width: stage.width * zoom, height: stage.length * zoom }}
+                onClick={() => setSelectedId(stage.id)}
+                onPointerDown={event => {
+                  if (event.button !== 0) return;
+                  setSelectedId(stage.id);
+                  setError("");
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  drag.current = { id: stage.id, startX: event.clientX, startY: event.clientY, origin: position };
+                }}
+                onPointerMove={event => {
+                  const current = drag.current;
+                  if (!current || current.id !== stage.id) return;
+                  const next = {
+                    x: Math.max(0, Math.round(current.origin.x + (event.clientX - current.startX) / zoom)),
+                    y: Math.max(0, Math.round(current.origin.y + (event.clientY - current.startY) / zoom)),
+                  };
+                  setPositions(previous => ({ ...previous, [stage.id]: next }));
+                }}
+                onPointerUp={event => {
+                  const current = drag.current;
+                  if (!current || current.id !== stage.id) return;
+                  const next = positionOf(stage.id);
+                  if (!moveStage(stage, next)) setPositions(previous => ({ ...previous, [stage.id]: current.origin }));
+                  drag.current = null;
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                }}
+                onPointerCancel={() => {
+                  const current = drag.current;
+                  if (current) setPositions(previous => ({ ...previous, [current.id]: current.origin }));
+                  drag.current = null;
+                }}
+                onKeyDown={event => {
+                  const steps: Record<string, Position> = { ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 }, ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 } };
+                  const step = steps[event.key];
+                  if (!step) return;
+                  event.preventDefault();
+                  setSelectedId(stage.id);
+                  moveStage(stage, { x: position.x + step.x, y: position.y + step.y });
+                }}>
+                <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${stage.width} ${stage.length}`} preserveAspectRatio="none" aria-hidden="true">
+                  {stage.decks.map((deck, index) => <rect key={index} x={deck.x} y={deck.y} width={deck.w} height={deck.h}
+                    className={deck.isBridge ? "layout-bridge" : "layout-deck"} strokeWidth={1} vectorEffect="non-scaling-stroke" />)}
+                  {stage.holders.map((holder, index) => <rect key={index} x={holder.x} y={holder.y} width={holder.w} height={holder.h}
+                    className={`layout-holder layout-holder-${holder.capacity}`} strokeWidth={3} vectorEffect="non-scaling-stroke" />)}
+                </svg>
+                <span className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 truncate bg-background/90 px-1 py-0.5 text-xs font-semibold">{stage.name}</span>
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+        {selected && <>
+          <span className="flex items-center gap-2 font-semibold"><Move className="size-4" />{selected.name}</span>
+          <span>{selected.width} × {selected.length} ft · {selected.heightIn}" high</span>
+          <span className="text-muted-foreground">X: {positionOf(selected.id).x} ft · Y: {positionOf(selected.id).y} ft</span>
+          {!selected.valid && <span className="text-destructive">Stage plan unavailable</span>}
+        </>}
+        <span className="ml-auto text-muted-foreground">Grid: 4 ft · Snap: 1 ft</span>
+      </div>
+      {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
+    </section>
+  );
+}
