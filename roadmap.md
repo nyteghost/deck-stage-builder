@@ -2,3 +2,4 @@
 - [x] Tickable second stage with its own width/length/height
 - [x] Remove side views and add a draggable whole-stage layout view for all enabled stages
 - [x] Add a quantity for 4×8 stages, independent layout copies, and shared inventory validation
+- [ ] Use spare larger holders for single-deck stages when single-deck holders run out, with accurate counts and copy labels
