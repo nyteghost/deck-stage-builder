@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StageLayout, type LayoutStage } from "@/components/stage-layout";
@@ -70,7 +71,10 @@ const HEIGHT_PRESETS = [32, 36, 40, 44];
 // ---------- persisted stage settings (survive rebuilds, remounts, reloads) ----------
 const STAGE_STORE_KEY = "stage-planner:stages";
 const APP_STORE_KEY = "stage-planner:app";
+const stageQuantitySchema = z.number().int().min(1).max(INVENTORY.totalDecks);
+
 type SavedStage = {
+  quantity?: number;
   width?: number;
   length?: number;
   heightIn?: number;
@@ -607,6 +611,11 @@ function StagePanel({
   const [heightIn, setHeightIn] = useState(MIN_HEIGHT_IN);
   const [heightText, setHeightText] = useState(String(MIN_HEIGHT_IN));
   const [stageName, setStageName] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [quantityText, setQuantityText] = useState("1");
+  const [quantityError, setQuantityError] = useState("");
+  const isSingleDeckStage = (width === 4 && length === 8) || (width === 8 && length === 4);
+  const stageQuantity = isSingleDeckStage ? quantity : 1;
 
   const displayTitle = stageName.trim() || title;
 
@@ -628,10 +637,17 @@ function StagePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [width, length, stock, mostlyThree, allowTwo, planNonce],
   );
-  const result = useMemo(
+  const singleResult = useMemo(
     () => (manual ? manualResult(pieces, width, length) : autoResult),
     [manual, pieces, width, length, autoResult],
   );
+
+  const result = useMemo<Result>(() => {
+    if (isSingleDeckStage && stageQuantity > Math.min(stock.decks, stock.one)) {
+      return { ok: false, reason: `These ${stageQuantity} stages need ${stageQuantity} decks and ${stageQuantity} single-deck holders. Only ${stock.decks} decks and ${stock.one} single-deck holders remain.` };
+    }
+    return singleResult;
+  }, [isSingleDeckStage, stageQuantity, stock.decks, stock.one, singleResult]);
 
   // Keep stage settings (width/length/height/name/etc.) saved so nothing wipes
   // them — not the rebuild button, a page reload, or a component remount.
@@ -639,6 +655,11 @@ function StagePanel({
   useEffect(() => {
     const s = readStored<Record<string, SavedStage>>(STAGE_STORE_KEY, {})[stageId];
     if (s) {
+      const savedQuantity = stageQuantitySchema.safeParse(s.quantity);
+      if (savedQuantity.success) {
+        setQuantity(savedQuantity.data);
+        setQuantityText(String(savedQuantity.data));
+      }
       if (typeof s.width === "number" && s.width > 0) setWidth(s.width);
       if (typeof s.length === "number" && s.length > 0) setLength(s.length);
       if (typeof s.heightIn === "number") setHeightIn(s.heightIn);
@@ -654,8 +675,8 @@ function StagePanel({
       skipSave.current = false;
       return;
     }
-    writeSavedStage(stageId, { width, length, heightIn, heightText, stageName, mostlyThree, allowTwo });
-  }, [stageId, width, length, heightIn, heightText, stageName, mostlyThree, allowTwo]);
+    writeSavedStage(stageId, { width, length, heightIn, heightText, stageName, quantity, mostlyThree, allowTwo });
+  }, [stageId, width, length, heightIn, heightText, stageName, quantity, mostlyThree, allowTwo]);
 
   const loadAutoPlan = () => {
     const seeded = piecesFromResult(autoResult);
@@ -845,8 +866,8 @@ function StagePanel({
       if (h.capacity === 2) u.two++;
       if (h.capacity === 3) u.three++;
     }
-    return u;
-  }, [result]);
+    return { decks: u.decks * stageQuantity, one: u.one * stageQuantity, two: u.two * stageQuantity, three: u.three * stageQuantity };
+  }, [result, stageQuantity]);
 
   useEffect(() => {
     onUsage?.(usage);
@@ -863,12 +884,12 @@ function StagePanel({
   const legHeightIn = Math.max(heightIn - DECK_THICKNESS_IN, 0);
   useEffect(() => {
     onLayoutChange?.({
-      id: stageId, name: displayTitle, width, length, heightIn,
+      id: stageId, name: displayTitle, width, length, heightIn, quantity: stageQuantity,
       valid: result.ok && !result.holderError,
       decks: result.ok ? result.decks : [],
       holders: result.ok ? result.holders : [],
     });
-  }, [stageId, displayTitle, width, length, heightIn, result, onLayoutChange]);
+  }, [stageId, displayTitle, width, length, heightIn, stageQuantity, result, onLayoutChange]);
 
 
   return (
@@ -910,6 +931,25 @@ function StagePanel({
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
+
+              {isSingleDeckStage && (
+                <div>
+                  <label htmlFor={`${stageId}-quantity`} className="block text-sm font-medium">Number of 4×8 stages</label>
+                  <input id={`${stageId}-quantity`} type="number" min={1} max={INVENTORY.totalDecks} step={1}
+                    value={quantityText}
+                    onChange={event => {
+                      const text = event.target.value;
+                      setQuantityText(text);
+                      const parsed = stageQuantitySchema.safeParse(text === "" ? undefined : Number(text));
+                      if (parsed.success) { setQuantity(parsed.data); setQuantityError(""); }
+                      else setQuantityError(`Enter a whole number from 1 to ${INVENTORY.totalDecks}.`);
+                    }}
+                    onBlur={() => { setQuantityText(String(quantity)); setQuantityError(""); }}
+                    aria-invalid={!!quantityError} aria-describedby={quantityError ? `${stageId}-quantity-error` : undefined}
+                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  {quantityError && <p id={`${stageId}-quantity-error`} role="alert" className="mt-1 text-xs text-destructive">{quantityError}</p>}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium">
@@ -1123,7 +1163,7 @@ function StagePanel({
                 </div>
                 {result.ok ? (
                   (() => {
-                    const count = result.decks.length;
+                    const count = result.decks.length * stageQuantity;
                     const overDecks = count > stock.decks;
                     const totals = result.holders.reduce(
                       (acc, h) => {
@@ -1149,10 +1189,10 @@ function StagePanel({
                           </span>
                         </div>
                         <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                          <div>{totals.three}× 3-deck holder (12&#39;×8&#39;)</div>
-                          <div>{totals.two}× 2-deck holder (8&#39;×8&#39;)</div>
-                          <div>{totals.one}× 1-deck holder (4&#39;×8&#39;)</div>
-                          <div>{result.bridges.length}× bridge deck (4&#39;×8&#39;)</div>
+                          <div>{totals.three * stageQuantity}× 3-deck holder (12&#39;×8&#39;)</div>
+                          <div>{totals.two * stageQuantity}× 2-deck holder (8&#39;×8&#39;)</div>
+                          <div>{totals.one * stageQuantity}× 1-deck holder (4&#39;×8&#39;)</div>
+                          <div>{result.bridges.length * stageQuantity}× bridge deck (4&#39;×8&#39;)</div>
                         </div>
                         {result.holderError && (
                           <div className="mt-1 text-xs font-medium text-destructive">
@@ -1303,21 +1343,23 @@ function StagePanel({
                         <span className="font-medium">{length}&#39;</span>
                         <span>Height:</span>
                         <span className="font-medium">{heightIn}&quot;</span>
+                        <span>Stage quantity:</span>
+                        <span className="font-medium">{stageQuantity}</span>
                         <span>Total decks:</span>
-                        <span className="font-medium">{result.decks.length}</span>
+                        <span className="font-medium">{result.decks.length * stageQuantity}</span>
                         <span>Bridge decks:</span>
                         <span className="font-medium">{result.bridges.length}</span>
                         <span>3-deck holders:</span>
                         <span className="font-medium">
-                          {result.holders.filter((h) => h.capacity === 3).length}
+                          {result.holders.filter((h) => h.capacity === 3).length * stageQuantity}
                         </span>
                         <span>2-deck holders:</span>
                         <span className="font-medium">
-                          {result.holders.filter((h) => h.capacity === 2).length}
+                          {result.holders.filter((h) => h.capacity === 2).length * stageQuantity}
                         </span>
                         <span>1-deck holders:</span>
                         <span className="font-medium">
-                          {result.holders.filter((h) => h.capacity === 1).length}
+                          {result.holders.filter((h) => h.capacity === 1).length * stageQuantity}
                         </span>
                       </div>
                     </div>
@@ -1445,7 +1487,16 @@ function Index() {
     ...(showSecond && showThird ? ["s3"] : []),
     ...(showSecond && showThird && showFourth ? ["s4"] : []),
     ...(showSecond && showThird && showFourth && showFifth ? ["s5"] : [])];
-  const activeLayoutStages = enabledIds.flatMap(id => layoutStages[id] ? [layoutStages[id]] : []);
+  const activeLayoutStages = enabledIds.flatMap(id => {
+    const stage = layoutStages[id];
+    if (!stage) return [];
+    const parsed = stageQuantitySchema.safeParse(stage.quantity ?? 1);
+    const count = parsed.success ? parsed.data : 1;
+    return Array.from({ length: count }, (_, index) => ({ ...stage,
+      id: index === 0 ? stage.id : `${stage.id}-copy-${index + 1}`,
+      name: count === 1 ? stage.name : `${stage.name} ${index + 1}`,
+    }));
+  });
 
   // Persist which stages are enabled and the event name across reloads.
   const skipAppSave = useRef(true);
