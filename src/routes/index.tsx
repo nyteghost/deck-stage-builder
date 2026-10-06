@@ -595,6 +595,7 @@ function manualResult(pieces: ManualPiece[], widthFt: number, lengthFt: number):
 
 
 function StagePanel({
+  stageId,
   title,
   defaultWidth,
   defaultLength,
@@ -602,6 +603,7 @@ function StagePanel({
   onUsage,
   rebuildKey = 0,
 }: {
+  stageId: string;
   title: string;
   defaultWidth: number;
   defaultLength: number;
@@ -1763,6 +1765,7 @@ function Index() {
 
         <div className="print-grid">
         <StagePanel
+          stageId="s1"
           title={showSecond ? "Stage 1" : "Stage"}
           defaultWidth={24}
           defaultLength={16}
@@ -1781,6 +1784,7 @@ function Index() {
               </div>
             </div>
             <StagePanel
+              stageId="s2"
               title="Stage 2"
               defaultWidth={16}
               defaultLength={8}
@@ -1803,6 +1807,7 @@ function Index() {
               </div>
             </div>
             <StagePanel
+              stageId="s3"
               title="Stage 3"
               defaultWidth={8}
               defaultLength={8}
@@ -1825,6 +1830,7 @@ function Index() {
               </div>
             </div>
             <StagePanel
+              stageId="s4"
               title="Stage 4"
               defaultWidth={8}
               defaultLength={8}
@@ -1847,6 +1853,7 @@ function Index() {
               </div>
             </div>
             <StagePanel
+              stageId="s5"
               title="Stage 5"
               defaultWidth={8}
               defaultLength={8}
