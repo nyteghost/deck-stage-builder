@@ -1676,6 +1676,16 @@ function Index() {
           Print stages side by side
         </button>
 
+        {showSecond && (
+          <button
+            type="button"
+            onClick={() => setRebuildKey((k) => k + 1)}
+            className="no-print mb-6 ml-3 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted"
+          >
+            Rebuild all stages
+          </button>
+        )}
+
         <div className="print-grid">
         <StagePanel
           title={showSecond ? "Stage 1" : "Stage"}
