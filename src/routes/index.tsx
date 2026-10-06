@@ -1707,6 +1707,49 @@ function Index() {
               defaultLength={8}
               labelPrefix="S3-"
               stock={remaining3}
+              onUsage={setUsed3}
+            />
+          </div>
+        )}
+        {showThird && showFourth && (
+          <div>
+            <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
+              <div className="font-semibold">Left for Stage 4 after Stages 1–3</div>
+              <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
+                <div>{remaining4.decks} decks</div>
+                <div>{remaining4.three}× 3-deck holder</div>
+                <div>{remaining4.two}× 2-deck holder</div>
+                <div>{remaining4.one}× 1-deck holder</div>
+              </div>
+            </div>
+            <StagePanel
+              title="Stage 4"
+              defaultWidth={8}
+              defaultLength={8}
+              labelPrefix="S4-"
+              stock={remaining4}
+              onUsage={setUsed4}
+            />
+          </div>
+        )}
+        {showFourth && showFifth && (
+          <div>
+            <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
+              <div className="font-semibold">Left for Stage 5 after Stages 1–4</div>
+              <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
+                <div>{remaining5.decks} decks</div>
+                <div>{remaining5.three}× 3-deck holder</div>
+                <div>{remaining5.two}× 2-deck holder</div>
+                <div>{remaining5.one}× 1-deck holder</div>
+              </div>
+            </div>
+            <StagePanel
+              title="Stage 5"
+              defaultWidth={8}
+              defaultLength={8}
+              labelPrefix="S5-"
+              stock={remaining5}
+              onUsage={setUsed5}
             />
           </div>
         )}
