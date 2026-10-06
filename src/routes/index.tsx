@@ -1357,6 +1357,9 @@ function StagePanel({
                             <span className="text-[10px] text-white/90 drop-shadow">
                               {h.w}×{h.h}
                             </span>
+                            <span className="hidden text-[10px] font-semibold text-white drop-shadow print:inline-block">
+                              {heightIn}&quot; high
+                            </span>
                           </div>
                         </div>
                       ))}
