@@ -1455,6 +1455,8 @@ function StagePanel({
 function Index() {
   const [showSecond, setShowSecond] = useState(false);
   const [used1, setUsed1] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [showThird, setShowThird] = useState(false);
+  const [used2, setUsed2] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
   const [eventName, setEventName] = useState("");
   const [eventNameDraft, setEventNameDraft] = useState("");
   const [showEventModal, setShowEventModal] = useState(false);
@@ -1467,6 +1469,15 @@ function Index() {
       three: Math.max(0, FULL_STOCK.three - used1.three),
     }),
     [used1],
+  );
+  const remaining3 = useMemo<Stock>(
+    () => ({
+      decks: Math.max(0, remaining.decks - used2.decks),
+      one: Math.max(0, remaining.one - used2.one),
+      two: Math.max(0, remaining.two - used2.two),
+      three: Math.max(0, remaining.three - used2.three),
+    }),
+    [remaining, used2],
   );
 
 
@@ -1497,6 +1508,18 @@ function Index() {
           <span className="font-medium">Add a second stage</span>
           <span className="text-xs text-muted-foreground">(its own width, length &amp; height)</span>
         </label>
+
+        {showSecond && (
+          <label className="no-print mb-6 ml-3 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
+            <input
+              type="checkbox"
+              checked={showThird}
+              onChange={(e) => setShowThird(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="font-medium">Add a third stage</span>
+          </label>
+        )}
 
         <button
           type="button"
@@ -1533,6 +1556,27 @@ function Index() {
               defaultLength={8}
               labelPrefix="S2-"
               stock={remaining}
+              onUsage={setUsed2}
+            />
+          </div>
+        )}
+        {showSecond && showThird && (
+          <div>
+            <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
+              <div className="font-semibold">Left for Stage 3 after Stages 1 &amp; 2</div>
+              <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
+                <div>{remaining3.decks} decks</div>
+                <div>{remaining3.three}× 3-deck holder</div>
+                <div>{remaining3.two}× 2-deck holder</div>
+                <div>{remaining3.one}× 1-deck holder</div>
+              </div>
+            </div>
+            <StagePanel
+              title="Stage 3"
+              defaultWidth={8}
+              defaultLength={8}
+              labelPrefix="S3-"
+              stock={remaining3}
             />
           </div>
         )}
