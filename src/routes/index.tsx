@@ -1576,7 +1576,11 @@ function Index() {
   const handleLayoutChange = useCallback((stage: LayoutStage) => {
     setLayoutStages(previous => ({ ...previous, [stage.id]: stage }));
   }, []);
-  const enabledIds = Array.from({ length: stageCount }, (_, i) => `s${i + 1}`);
+  const [removedIndexes, setRemovedIndexes] = useState<number[]>([]);
+  const enabledIndexes = Array.from({ length: stageCount }, (_, i) => i).filter(
+    (i) => !removedIndexes.includes(i),
+  );
+  const enabledIds = enabledIndexes.map((i) => `s${i + 1}`);
   const activeLayoutStages = enabledIds.flatMap(id => {
     const stage = layoutStages[id];
     if (!stage) return [];
