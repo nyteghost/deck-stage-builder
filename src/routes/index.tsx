@@ -557,6 +557,7 @@ function StagePanel({
   defaultLength,
   stock = FULL_STOCK,
   onUsage,
+  rebuildKey = 0,
 }: {
   title: string;
   defaultWidth: number;
@@ -564,6 +565,7 @@ function StagePanel({
   labelPrefix?: string;
   stock?: Stock;
   onUsage?: (u: Stock) => void;
+  rebuildKey?: number;
 }) {
   const [width, setWidth] = useState(defaultWidth);
   const [length, setLength] = useState(defaultLength);
