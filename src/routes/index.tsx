@@ -86,6 +86,7 @@ type SavedStage = {
   allowTwo?: boolean;
 };
 type SavedApp = {
+  stageCount?: number;
   showSecond?: boolean;
   showThird?: boolean;
   showFourth?: boolean;
