@@ -1502,15 +1502,17 @@ function StagePanel({
 }
 
 function Index() {
-  const [showSecond, setShowSecond] = useState(false);
-  const [used1, setUsed1] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
-  const [showThird, setShowThird] = useState(false);
-  const [used2, setUsed2] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
-  const [showFourth, setShowFourth] = useState(false);
-  const [used3, setUsed3] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
-  const [showFifth, setShowFifth] = useState(false);
-  const [used4, setUsed4] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
-  const [used5, setUsed5] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [stageCount, setStageCount] = useState(1);
+  const [usedByStage, setUsedByStage] = useState<Stock[]>([]);
+  const setUsedFor = useCallback(
+    (index: number) => (stock: Stock) =>
+      setUsedByStage((previous) => {
+        const next = [...previous];
+        next[index] = stock;
+        return next;
+      }),
+    [],
+  );
   const [rebuildKey, setRebuildKey] = useState(0);
   const [eventName, setEventName] = useState("");
   const [eventNameDraft, setEventNameDraft] = useState("");
