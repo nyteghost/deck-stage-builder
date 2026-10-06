@@ -1729,7 +1729,10 @@ function Index() {
           <span className="font-medium">Number of stages</span>
           <select
             value={stageCount}
-            onChange={(e) => setStageCount(Number(e.target.value))}
+            onChange={(e) => {
+              setStageCount(Number(e.target.value));
+              setRemovedIndexes([]);
+            }}
             className="rounded-md border border-border bg-background px-2 py-1 text-sm outline-none ring-ring focus:ring-2"
           >
             {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
