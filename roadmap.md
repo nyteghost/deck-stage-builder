@@ -4,5 +4,5 @@
 - [x] Add a quantity for 4×8 stages, independent layout copies, and shared inventory validation
 - [x] Use spare larger holders for single-deck stages when single-deck holders run out, with accurate counts and copy labels
 - [x] Rotate individual single-deck stages in Layout view without changing inventory
-- [ ] Print complete stage diagrams and summaries across pages
-- [ ] Include current arranged and rotated Layout view in printing
+- [x] Print complete stage diagrams and summaries across pages
+- [x] Include current arranged and rotated Layout view in printing
