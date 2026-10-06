@@ -164,6 +164,12 @@
 
 .print-only { display: none; }
 
+/* The layout-view toggle hides the panel on screen only; printing always keeps it. */
+.layout-view-swap.hidden { display: none; }
+@media print {
+  .layout-view-swap.hidden { display: block !important; }
+}
+
 @media print {
   @page { margin: 12mm; }
   body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
