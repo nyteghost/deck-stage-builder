@@ -557,6 +557,7 @@ function StagePanel({
   defaultLength,
   stock = FULL_STOCK,
   onUsage,
+  rebuildKey = 0,
 }: {
   title: string;
   defaultWidth: number;
@@ -564,6 +565,7 @@ function StagePanel({
   labelPrefix?: string;
   stock?: Stock;
   onUsage?: (u: Stock) => void;
+  rebuildKey?: number;
 }) {
   const [width, setWidth] = useState(defaultWidth);
   const [length, setLength] = useState(defaultLength);
@@ -605,6 +607,18 @@ function StagePanel({
     loadAutoPlan();
     setManual(true);
   };
+
+  // Rebuild from the auto plan when the global "rebuild all" button is pressed.
+  const firstRebuild = useRef(true);
+  useEffect(() => {
+    if (firstRebuild.current) {
+      firstRebuild.current = false;
+      return;
+    }
+    setManual(false);
+    setPlaceError(null);
+    setDrag(null);
+  }, [rebuildKey]);
 
   const [drag, setDrag] = useState<{
     id: string;
@@ -1505,6 +1519,7 @@ function Index() {
   const [showFifth, setShowFifth] = useState(false);
   const [used4, setUsed4] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
   const [used5, setUsed5] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [rebuildKey, setRebuildKey] = useState(0);
   const [eventName, setEventName] = useState("");
   const [eventNameDraft, setEventNameDraft] = useState("");
   const [showEventModal, setShowEventModal] = useState(false);
@@ -1662,12 +1677,23 @@ function Index() {
           Print stages side by side
         </button>
 
+        {showSecond && (
+          <button
+            type="button"
+            onClick={() => setRebuildKey((k) => k + 1)}
+            className="no-print mb-6 ml-3 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted"
+          >
+            Rebuild all stages
+          </button>
+        )}
+
         <div className="print-grid">
         <StagePanel
           title={showSecond ? "Stage 1" : "Stage"}
           defaultWidth={24}
           defaultLength={16}
           onUsage={setUsed1}
+          rebuildKey={rebuildKey}
         />
         {showSecond && (
           <div>
@@ -1687,6 +1713,7 @@ function Index() {
               labelPrefix="S2-"
               stock={remaining}
               onUsage={setUsed2}
+              rebuildKey={rebuildKey}
             />
           </div>
         )}
@@ -1708,6 +1735,7 @@ function Index() {
               labelPrefix="S3-"
               stock={remaining3}
               onUsage={setUsed3}
+              rebuildKey={rebuildKey}
             />
           </div>
         )}
@@ -1729,6 +1757,7 @@ function Index() {
               labelPrefix="S4-"
               stock={remaining4}
               onUsage={setUsed4}
+              rebuildKey={rebuildKey}
             />
           </div>
         )}
@@ -1750,6 +1779,7 @@ function Index() {
               labelPrefix="S5-"
               stock={remaining5}
               onUsage={setUsed5}
+              rebuildKey={rebuildKey}
             />
           </div>
         )}
