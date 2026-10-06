@@ -1693,6 +1693,7 @@ function Index() {
           defaultWidth={24}
           defaultLength={16}
           onUsage={setUsed1}
+          rebuildKey={rebuildKey}
         />
         {showSecond && (
           <div>
@@ -1712,6 +1713,7 @@ function Index() {
               labelPrefix="S2-"
               stock={remaining}
               onUsage={setUsed2}
+              rebuildKey={rebuildKey}
             />
           </div>
         )}
@@ -1733,6 +1735,7 @@ function Index() {
               labelPrefix="S3-"
               stock={remaining3}
               onUsage={setUsed3}
+              rebuildKey={rebuildKey}
             />
           </div>
         )}
@@ -1754,6 +1757,7 @@ function Index() {
               labelPrefix="S4-"
               stock={remaining4}
               onUsage={setUsed4}
+              rebuildKey={rebuildKey}
             />
           </div>
         )}
@@ -1775,6 +1779,7 @@ function Index() {
               labelPrefix="S5-"
               stock={remaining5}
               onUsage={setUsed5}
+              rebuildKey={rebuildKey}
             />
           </div>
         )}
