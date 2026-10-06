@@ -1538,10 +1538,17 @@ function Index() {
   const skipAppSave = useRef(true);
   useEffect(() => {
     const s = readStored<SavedApp>(APP_STORE_KEY, {});
-    if (typeof s.showSecond === "boolean") setShowSecond(s.showSecond);
-    if (typeof s.showThird === "boolean") setShowThird(s.showThird);
-    if (typeof s.showFourth === "boolean") setShowFourth(s.showFourth);
-    if (typeof s.showFifth === "boolean") setShowFifth(s.showFifth);
+    if (typeof s.stageCount === "number" && s.stageCount >= 1 && s.stageCount <= 10) {
+      setStageCount(Math.floor(s.stageCount));
+    } else if (typeof s.showSecond === "boolean") {
+      // Migrate the old per-stage checkboxes into a stage count.
+      let count = 1;
+      if (s.showSecond) count = 2;
+      if (s.showSecond && s.showThird) count = 3;
+      if (s.showSecond && s.showThird && s.showFourth) count = 4;
+      if (s.showSecond && s.showThird && s.showFourth && s.showFifth) count = 5;
+      setStageCount(count);
+    }
     if (typeof s.eventName === "string") setEventName(s.eventName);
     skipAppSave.current = true;
   }, []);
@@ -1550,54 +1557,26 @@ function Index() {
       skipAppSave.current = false;
       return;
     }
-    writeStored(APP_STORE_KEY, { showSecond, showThird, showFourth, showFifth, eventName });
-  }, [showSecond, showThird, showFourth, showFifth, eventName]);
+    writeStored(APP_STORE_KEY, { stageCount, eventName });
+  }, [stageCount, eventName]);
 
-  const remaining = useMemo<Stock>(
-    () => ({
-      decks: Math.max(0, FULL_STOCK.decks - used1.decks),
-      one: Math.max(0, FULL_STOCK.one - used1.one),
-      two: Math.max(0, FULL_STOCK.two - used1.two),
-      three: Math.max(0, FULL_STOCK.three - used1.three),
-    }),
-    [used1],
-  );
-  const remaining3 = useMemo<Stock>(
-    () => ({
-      decks: Math.max(0, remaining.decks - used2.decks),
-      one: Math.max(0, remaining.one - used2.one),
-      two: Math.max(0, remaining.two - used2.two),
-      three: Math.max(0, remaining.three - used2.three),
-    }),
-    [remaining, used2],
-  );
-  const remaining4 = useMemo<Stock>(
-    () => ({
-      decks: Math.max(0, remaining3.decks - used3.decks),
-      one: Math.max(0, remaining3.one - used3.one),
-      two: Math.max(0, remaining3.two - used3.two),
-      three: Math.max(0, remaining3.three - used3.three),
-    }),
-    [remaining3, used3],
-  );
-  const remaining5 = useMemo<Stock>(
-    () => ({
-      decks: Math.max(0, remaining4.decks - used4.decks),
-      one: Math.max(0, remaining4.one - used4.one),
-      two: Math.max(0, remaining4.two - used4.two),
-      three: Math.max(0, remaining4.three - used4.three),
-    }),
-    [remaining4, used4],
-  );
-  const remainingFinal = useMemo<Stock>(
-    () => ({
-      decks: Math.max(0, remaining5.decks - used5.decks),
-      one: Math.max(0, remaining5.one - used5.one),
-      two: Math.max(0, remaining5.two - used5.two),
-      three: Math.max(0, remaining5.three - used5.three),
-    }),
-    [remaining5, used5],
-  );
+  // remainingAfter[i] = stock left once stages 1..i+1 have taken their share.
+  const remainingAfter = useMemo<Stock[]>(() => {
+    const out: Stock[] = [];
+    let current = FULL_STOCK;
+    for (let i = 0; i < 10; i += 1) {
+      const used = usedByStage[i] ?? { decks: 0, one: 0, two: 0, three: 0 };
+      current = {
+        decks: Math.max(0, current.decks - used.decks),
+        one: Math.max(0, current.one - used.one),
+        two: Math.max(0, current.two - used.two),
+        three: Math.max(0, current.three - used.three),
+      };
+      out.push(current);
+    }
+    return out;
+  }, [usedByStage]);
+  const remainingFinal = remainingAfter[9];
   const totalUsed = useMemo<Stock>(
     () => ({
       decks: FULL_STOCK.decks - remainingFinal.decks,
