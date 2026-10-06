@@ -1585,6 +1585,7 @@ function Index() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [clearKey, setClearKey] = useState(0);
+  const [showLayout, setShowLayout] = useState(false);
   const [layoutStages, setLayoutStages] = useState<Record<string, LayoutStage>>({});
   const handleLayoutChange = useCallback((stage: LayoutStage) => {
     setLayoutStages(previous => ({ ...previous, [stage.id]: stage }));
@@ -1792,7 +1793,18 @@ function Index() {
           Clear all stages
         </button>
 
-        <StageLayout stages={activeLayoutStages} />
+        <button
+          type="button"
+          onClick={() => setShowLayout(show => !show)}
+          aria-expanded={showLayout}
+          className={`no-print mb-6 ml-3 rounded-md border border-border px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted ${showLayout ? "bg-muted font-semibold" : "bg-card"}`}
+        >
+          {showLayout ? "Hide Layout view" : "Show Layout view"}
+        </button>
+
+        <div className={`layout-view-swap${showLayout ? "" : " hidden"}`}>
+          <StageLayout stages={activeLayoutStages} />
+        </div>
 
         <div className="print-grid">
         {enabledIndexes.map((i, position) => {
