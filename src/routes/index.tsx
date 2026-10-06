@@ -1627,6 +1627,30 @@ function Index() {
           </label>
         )}
 
+        {showThird && (
+          <label className="no-print mb-6 ml-3 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
+            <input
+              type="checkbox"
+              checked={showFourth}
+              onChange={(e) => setShowFourth(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="font-medium">Add a fourth stage</span>
+          </label>
+        )}
+
+        {showFourth && (
+          <label className="no-print mb-6 ml-3 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
+            <input
+              type="checkbox"
+              checked={showFifth}
+              onChange={(e) => setShowFifth(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="font-medium">Add a fifth stage</span>
+          </label>
+        )}
+
         <button
           type="button"
           onClick={() => {
