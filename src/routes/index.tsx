@@ -1663,7 +1663,7 @@ function Index() {
           Print stages side by side
         </button>
 
-        {showSecond && (
+        {stageCount > 1 && (
           <button
             type="button"
             onClick={() => setRebuildKey((k) => k + 1)}
