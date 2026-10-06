@@ -1576,7 +1576,11 @@ function Index() {
   const handleLayoutChange = useCallback((stage: LayoutStage) => {
     setLayoutStages(previous => ({ ...previous, [stage.id]: stage }));
   }, []);
-  const enabledIds = Array.from({ length: stageCount }, (_, i) => `s${i + 1}`);
+  const [removedIndexes, setRemovedIndexes] = useState<number[]>([]);
+  const enabledIndexes = Array.from({ length: stageCount }, (_, i) => i).filter(
+    (i) => !removedIndexes.includes(i),
+  );
+  const enabledIds = enabledIndexes.map((i) => `s${i + 1}`);
   const activeLayoutStages = enabledIds.flatMap(id => {
     const stage = layoutStages[id];
     if (!stage) return [];
@@ -1615,11 +1619,12 @@ function Index() {
     writeStored(APP_STORE_KEY, { stageCount, eventName });
   }, [stageCount, eventName]);
 
-  // remainingAfter[i] = stock left once stages 1..i+1 have taken their share.
-  const remainingAfter = useMemo<Stock[]>(() => {
-    const out: Stock[] = [];
+  // Chain stock only through the stages that are still enabled, in order.
+  const { remainingBefore, remainingFinal } = useMemo(() => {
+    const before = new Map<number, Stock>();
     let current = FULL_STOCK;
-    for (let i = 0; i < 10; i += 1) {
+    for (const i of enabledIndexes) {
+      before.set(i, current);
       const used = usedByStage[i] ?? { decks: 0, one: 0, two: 0, three: 0 };
       current = {
         decks: Math.max(0, current.decks - used.decks),
@@ -1630,11 +1635,25 @@ function Index() {
         s6: Math.max(0, (current.s6 ?? 0) - (used.s6 ?? 0)),
         s7: Math.max(0, (current.s7 ?? 0) - (used.s7 ?? 0)),
       };
-      out.push(current);
     }
-    return out;
-  }, [usedByStage]);
-  const remainingFinal = remainingAfter[9];
+    return { remainingBefore: before, remainingFinal: current };
+  }, [usedByStage, enabledIndexes]);
+
+  // Remove one stage, free its inventory, and rebuild the stages that remain.
+  const removeStage = (index: number) => {
+    setRemovedIndexes((previous) => [...previous, index]);
+    setUsedByStage((previous) => {
+      const next = [...previous];
+      next[index] = { decks: 0, one: 0, two: 0, three: 0 };
+      return next;
+    });
+    setLayoutStages((previous) => {
+      const next = { ...previous };
+      delete next[`s${index + 1}`];
+      return next;
+    });
+    setRebuildKey((k) => k + 1);
+  };
   const totalUsed = useMemo<Stock>(
     () => ({
       decks: FULL_STOCK.decks - remainingFinal.decks,
@@ -1710,7 +1729,10 @@ function Index() {
           <span className="font-medium">Number of stages</span>
           <select
             value={stageCount}
-            onChange={(e) => setStageCount(Number(e.target.value))}
+            onChange={(e) => {
+              setStageCount(Number(e.target.value));
+              setRemovedIndexes([]);
+            }}
             className="rounded-md border border-border bg-background px-2 py-1 text-sm outline-none ring-ring focus:ring-2"
           >
             {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
@@ -1733,7 +1755,7 @@ function Index() {
           Print stages side by side
         </button>
 
-        {stageCount > 1 && (
+        {enabledIndexes.length > 1 && (
           <button
             type="button"
             onClick={() => setRebuildKey((k) => k + 1)}
@@ -1754,15 +1776,16 @@ function Index() {
         <StageLayout stages={activeLayoutStages} />
 
         <div className="print-grid">
-        {enabledIds.map((id, i) => {
-          const n = i + 1;
-          const stock = i === 0 ? undefined : remainingAfter[i - 1];
+        {enabledIndexes.map((i, position) => {
+          const id = `s${i + 1}`;
+          const n = position + 1;
+          const stock = position === 0 ? undefined : remainingBefore.get(i);
           return (
             <div key={`${id}-${clearKey}`}>
-              {i > 0 && stock && (
+              {position > 0 && stock && (
                 <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
                   <div className="font-semibold">
-                    Left for Stage {n} after {i === 1 ? "Stage 1" : `Stages 1–${i}`}
+                    Left for Stage {n} after {position === 1 ? "Stage 1" : `Stages 1–${position}`}
                   </div>
                   <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
                     <div>{stock.decks} decks</div>
@@ -1772,13 +1795,22 @@ function Index() {
                   </div>
                 </div>
               )}
+              <div className="no-print mb-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => removeStage(i)}
+                  className="rounded-md border border-border bg-card px-3 py-1 text-xs font-medium text-destructive shadow-sm hover:bg-muted"
+                >
+                  Remove stage
+                </button>
+              </div>
               <StagePanel
                 stageId={id}
                 onLayoutChange={handleLayoutChange}
-                title={stageCount > 1 ? `Stage ${n}` : "Stage"}
-                defaultWidth={n === 1 ? 24 : n === 2 ? 16 : 8}
-                defaultLength={n <= 2 ? (n === 1 ? 16 : 8) : 8}
-                labelPrefix={n === 1 ? undefined : `S${n}-`}
+                title={enabledIndexes.length > 1 ? `Stage ${n}` : "Stage"}
+                defaultWidth={i === 0 ? 24 : i === 1 ? 16 : 8}
+                defaultLength={i <= 1 ? (i === 0 ? 16 : 8) : 8}
+                labelPrefix={i === 0 ? undefined : `S${i + 1}-`}
                 stock={stock}
                 onUsage={setUsedFor(i)}
                 rebuildKey={rebuildKey}
@@ -1857,6 +1889,7 @@ function Index() {
                     window.localStorage.removeItem(APP_STORE_KEY);
                     skipAppSave.current = true;
                     setUsedByStage([]);
+                    setRemovedIndexes([]);
                     setStageCount(1);
                     setEventName("");
                     setEventNameDraft("");
