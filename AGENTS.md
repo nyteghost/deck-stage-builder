@@ -1,0 +1,3 @@
+# Architecture rules
+- Individual stage panels publish browser-safe drawing snapshots to the parent, which passes only enabled stages to the separate whole-stage layout editor; this keeps arrangement independent from deck planning and shared inventory.
+- Whole-stage layout positions are in feet and use pointer capture with one-foot snapping and non-overlapping drops; this keeps mouse, touch, and keyboard positioning consistent without altering stage dimensions.

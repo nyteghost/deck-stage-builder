@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StageLayout, type LayoutStage } from "@/components/stage-layout";
 
 
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stage Deck Planner — Top & Side Views" },
-      { name: "description", content: "Plan a stage from 4×8 ft decks: holders, bridges, plan view and side elevation with height." },
-      { property: "og:title", content: "Stage Deck Planner — Top & Side Views" },
-      { property: "og:description", content: "Plan a stage from 4×8 ft decks with holder placement, bridges and a side elevation." },
+      { title: "Stage Deck Planner — Stage Layouts" },
+      { name: "description", content: "Plan stages from 4×8 ft decks with holders and bridges, then arrange them in a draggable layout view." },
+      { property: "og:title", content: "Stage Deck Planner — Stage Layouts" },
+      { property: "og:description", content: "Plan stage decks and holders and arrange multiple stages in a final layout." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -75,7 +76,6 @@ type SavedStage = {
   heightIn?: number;
   heightText?: string;
   stageName?: string;
-  view?: "top" | "side" | "both";
   mostlyThree?: boolean;
   allowTwo?: boolean;
 };
@@ -109,18 +109,6 @@ function writeSavedStage(stageId: string, s: SavedStage) {
   all[stageId] = s;
   writeStored(STAGE_STORE_KEY, all);
 }
-
-type ElevationSegment = {
-  label: string;
-  x: number;
-  w: number;
-  kind: "holder" | "bridge";
-  capacity?: 1 | 2 | 3;
-};
-
-
-
-
 
 /**
  * Ways to cut a run of `r` adjacent decks into holders of 1/2/3 decks,
@@ -601,6 +589,7 @@ function StagePanel({
   defaultLength,
   stock = FULL_STOCK,
   onUsage,
+  onLayoutChange,
   rebuildKey = 0,
 }: {
   stageId: string;
@@ -610,6 +599,7 @@ function StagePanel({
   labelPrefix?: string;
   stock?: Stock;
   onUsage?: (u: Stock) => void;
+  onLayoutChange?: (stage: LayoutStage) => void;
   rebuildKey?: number;
 }) {
   const [width, setWidth] = useState(defaultWidth);
@@ -620,7 +610,6 @@ function StagePanel({
 
   const displayTitle = stageName.trim() || title;
 
-  const [view, setView] = useState<"top" | "side" | "both">("both");
 
   // ---- manual placement state ----
   const [manual, setManual] = useState(false);
@@ -655,7 +644,6 @@ function StagePanel({
       if (typeof s.heightIn === "number") setHeightIn(s.heightIn);
       if (typeof s.heightText === "string" && s.heightText !== "") setHeightText(s.heightText);
       if (typeof s.stageName === "string") setStageName(s.stageName);
-      if (s.view === "top" || s.view === "side" || s.view === "both") setView(s.view);
       if (typeof s.mostlyThree === "boolean") setMostlyThree(s.mostlyThree);
       if (typeof s.allowTwo === "boolean") setAllowTwo(s.allowTwo);
     }
@@ -666,8 +654,8 @@ function StagePanel({
       skipSave.current = false;
       return;
     }
-    writeSavedStage(stageId, { width, length, heightIn, heightText, stageName, view, mostlyThree, allowTwo });
-  }, [stageId, width, length, heightIn, heightText, stageName, view, mostlyThree, allowTwo]);
+    writeSavedStage(stageId, { width, length, heightIn, heightText, stageName, mostlyThree, allowTwo });
+  }, [stageId, width, length, heightIn, heightText, stageName, mostlyThree, allowTwo]);
 
   const loadAutoPlan = () => {
     const seeded = piecesFromResult(autoResult);
@@ -872,33 +860,15 @@ function StagePanel({
 
 
 
-  // Cross-section along the stage width, taken at the front edge (y = 0).
-  const elevation = useMemo<ElevationSegment[]>(() => {
-    if (!result.ok) return [];
-    const segs: ElevationSegment[] = [];
-    for (const h of result.holders) {
-      if (h.y !== 0) continue;
-      segs.push({ label: h.label, x: h.x, w: h.w, kind: "holder", capacity: h.capacity });
-    }
-    for (const br of result.bridges) {
-      if (br.y !== 0) continue;
-      segs.push({ label: br.label, x: br.x, w: br.w, kind: "bridge" });
-    }
-    return segs.sort((p, q) => p.x - q.x);
-  }, [result]);
-
-  const legCount = elevation.filter((s) => s.kind === "holder").length * 2;
-  // The stage height entered IS the finished walking-surface height.
-  const surfaceTotalIn = heightIn;
   const legHeightIn = Math.max(heightIn - DECK_THICKNESS_IN, 0);
-
-  // Vertical scale for the elevation: inches → px (kept readable for short heights).
-  const vScale = Math.min(Math.max(220 / Math.max(surfaceTotalIn, 1), 2), 8);
-  const deckPx = Math.max(DECK_THICKNESS_IN * vScale, 6);
-  const legPx = Math.max(legHeightIn * vScale, 0);
-  const sideH = deckPx + legPx;
-  const showTop = view === "top" || view === "both";
-  const showSide = view === "side" || view === "both";
+  useEffect(() => {
+    onLayoutChange?.({
+      id: stageId, name: displayTitle, width, length, heightIn,
+      valid: result.ok && !result.holderError,
+      decks: result.ok ? result.decks : [],
+      holders: result.ok ? result.holders : [],
+    });
+  }, [stageId, displayTitle, width, length, heightIn, result, onLayoutChange]);
 
 
   return (
@@ -988,26 +958,6 @@ function StagePanel({
                       }`}
                     >
                       {h}&quot;
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium">View</label>
-                <div className="mt-1 flex gap-1">
-                  {(["top", "side", "both"] as const).map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setView(v)}
-                      className={`flex-1 rounded-md border px-2 py-1.5 text-xs capitalize transition-colors ${
-                        view === v
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      {v}
                     </button>
                   ))}
                 </div>
@@ -1171,13 +1121,6 @@ function StagePanel({
                   <span className="text-muted-foreground">Leg height</span>
                   <span className="font-medium">{legHeightIn}&quot; (+ {DECK_THICKNESS_IN}&quot; deck)</span>
                 </div>
-                {result.ok && (
-                  <div className="flex justify-between py-0.5">
-                    <span className="text-muted-foreground">Legs (front row)</span>
-                    <span className="font-medium">{legCount}</span>
-                  </div>
-                )}
-
                 {result.ok ? (
                   (() => {
                     const count = result.decks.length;
@@ -1258,7 +1201,7 @@ function StagePanel({
           </div>
 
           <div className="space-y-6">
-            <div className={`rounded-lg border border-border bg-card p-5 shadow-sm ${!result.ok || showTop ? "" : "print-only"}`}>
+            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
               {result.ok ? (
                 <>
                   <div className="mb-1 text-sm font-semibold">Top view (plan)</div>
@@ -1396,111 +1339,6 @@ function StagePanel({
 
 
 
-            {result.ok && showSide && (
-              <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
-                <div className="mb-1 text-sm font-semibold">Side view (elevation)</div>
-                <div className="mb-3 text-xs text-muted-foreground">
-                  Looking at the front edge ({width} ft across). The walking surface sits{" "}
-                  {heightIn}&quot; off the floor: {DECK_THICKNESS_IN}&quot; deck slab on{" "}
-                  {legHeightIn}&quot; legs. Yellow sections are bridges — no leg beneath them.
-                </div>
-                <div className="overflow-auto pb-2">
-                  <div className="flex items-end gap-3">
-                    {/* height dimension marker */}
-                    <div
-                      className="relative shrink-0 text-[10px] text-muted-foreground"
-                      style={{ height: sideH, width: 44 }}
-                    >
-                      <div
-                        className="absolute right-0 border-r border-dashed border-border"
-                        style={{ top: 0, height: sideH }}
-                      />
-                      <div className="absolute right-1 top-0 whitespace-nowrap">
-                        {surfaceTotalIn}&quot;
-                      </div>
-                      <div
-                        className="absolute right-1 whitespace-nowrap"
-                        style={{ top: deckPx + legPx / 2 - 6 }}
-                      >
-                        {legHeightIn}&quot; legs
-                      </div>
-                    </div>
-
-                    <div className="relative" style={{ width: canvasW || 1, height: sideH }}>
-                      {/* deck slab */}
-                      <div
-                        className="absolute left-0 top-0 border border-border bg-muted/40"
-                        style={{ width: canvasW || 1, height: deckPx }}
-                      />
-                      {elevation.map((s) => {
-                        const color =
-                          s.kind === "bridge" ? BRIDGE_COLOR : HOLDER_COLORS[s.capacity ?? 1];
-                        return (
-                          <div key={`seg-${s.label}`}>
-                            <div
-                              className="absolute flex items-center justify-center text-[10px] font-bold text-white"
-                              style={{
-                                left: s.x * scale,
-                                top: 0,
-                                width: s.w * scale,
-                                height: deckPx,
-                                background: color,
-                                border: "1px solid rgba(0,0,0,0.25)",
-                                boxSizing: "border-box",
-                                color: s.kind === "bridge" ? "#000" : "#fff",
-                              }}
-                              title={
-                                s.kind === "bridge"
-                                  ? `${s.label}: bridge deck (unsupported span)`
-                                  : `${s.label}: ${s.capacity}-deck holder`
-                              }
-                            >
-                              {s.label}
-                            </div>
-                            {s.kind === "holder" && legPx > 0 && (
-                              <>
-                                <div
-                                  className="absolute"
-                                  style={{
-                                    left: s.x * scale,
-                                    top: deckPx,
-                                    width: 6,
-                                    height: legPx,
-                                    background: color,
-                                  }}
-                                />
-                                <div
-                                  className="absolute"
-                                  style={{
-                                    left: (s.x + s.w) * scale - 6,
-                                    top: deckPx,
-                                    width: 6,
-                                    height: legPx,
-                                    background: color,
-                                  }}
-                                />
-                              </>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {/* floor line */}
-                      <div
-                        className="absolute left-0 border-t-2 border-foreground/60"
-                        style={{ top: sideH, width: canvasW || 1 }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Horizontal scale: 1 ft ≈ {scale.toFixed(1)} px. Vertical scale: 1 in ≈{" "}
-                  {vScale.toFixed(1)} px (exaggerated for readability). Labels match the top view.
-                </p>
-              </div>
-            )}
-
-
-
             {result.ok && result.holders.length > 0 && (
               <div className="print-hide rounded-lg border border-border bg-card p-5 shadow-sm">
                 <div className="mb-3 text-sm font-semibold">Holder placement</div>
@@ -1599,6 +1437,15 @@ function Index() {
   const [eventName, setEventName] = useState("");
   const [eventNameDraft, setEventNameDraft] = useState("");
   const [showEventModal, setShowEventModal] = useState(false);
+  const [layoutStages, setLayoutStages] = useState<Record<string, LayoutStage>>({});
+  const handleLayoutChange = useCallback((stage: LayoutStage) => {
+    setLayoutStages(previous => ({ ...previous, [stage.id]: stage }));
+  }, []);
+  const enabledIds = ["s1", ...(showSecond ? ["s2"] : []),
+    ...(showSecond && showThird ? ["s3"] : []),
+    ...(showSecond && showThird && showFourth ? ["s4"] : []),
+    ...(showSecond && showThird && showFourth && showFifth ? ["s5"] : [])];
+  const activeLayoutStages = enabledIds.flatMap(id => layoutStages[id] ? [layoutStages[id]] : []);
 
   // Persist which stages are enabled and the event name across reloads.
   const skipAppSave = useRef(true);
@@ -1782,9 +1629,12 @@ function Index() {
           </button>
         )}
 
+        <StageLayout stages={activeLayoutStages} />
+
         <div className="print-grid">
         <StagePanel
           stageId="s1"
+          onLayoutChange={handleLayoutChange}
           title={showSecond ? "Stage 1" : "Stage"}
           defaultWidth={24}
           defaultLength={16}
@@ -1804,6 +1654,7 @@ function Index() {
             </div>
             <StagePanel
               stageId="s2"
+          onLayoutChange={handleLayoutChange}
               title="Stage 2"
               defaultWidth={16}
               defaultLength={8}
@@ -1827,6 +1678,7 @@ function Index() {
             </div>
             <StagePanel
               stageId="s3"
+          onLayoutChange={handleLayoutChange}
               title="Stage 3"
               defaultWidth={8}
               defaultLength={8}
@@ -1837,7 +1689,7 @@ function Index() {
             />
           </div>
         )}
-        {showThird && showFourth && (
+        {showSecond && showThird && showFourth && (
           <div>
             <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
               <div className="font-semibold">Left for Stage 4 after Stages 1–3</div>
@@ -1850,6 +1702,7 @@ function Index() {
             </div>
             <StagePanel
               stageId="s4"
+          onLayoutChange={handleLayoutChange}
               title="Stage 4"
               defaultWidth={8}
               defaultLength={8}
@@ -1860,7 +1713,7 @@ function Index() {
             />
           </div>
         )}
-        {showFourth && showFifth && (
+        {showSecond && showThird && showFourth && showFifth && (
           <div>
             <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
               <div className="font-semibold">Left for Stage 5 after Stages 1–4</div>
@@ -1873,6 +1726,7 @@ function Index() {
             </div>
             <StagePanel
               stageId="s5"
+          onLayoutChange={handleLayoutChange}
               title="Stage 5"
               defaultWidth={8}
               defaultLength={8}
