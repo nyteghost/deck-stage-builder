@@ -1585,6 +1585,7 @@ function Index() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [clearKey, setClearKey] = useState(0);
+  const [showLayout, setShowLayout] = useState(false);
   const [layoutStages, setLayoutStages] = useState<Record<string, LayoutStage>>({});
   const handleLayoutChange = useCallback((stage: LayoutStage) => {
     setLayoutStages(previous => ({ ...previous, [stage.id]: stage }));
