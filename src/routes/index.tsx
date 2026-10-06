@@ -1697,7 +1697,7 @@ function Index() {
           const n = i + 1;
           const stock = i === 0 ? undefined : remainingAfter[i - 1];
           return (
-            <div key={id}>
+            <div key={`${id}-${clearKey}`}>
               {i > 0 && stock && (
                 <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
                   <div className="font-semibold">
