@@ -74,7 +74,7 @@ export function StageLayout({ stages }: { stages: LayoutStage[] }) {
               <Button key={stage.id} variant="outline" aria-label={`Move ${stage.name}`} aria-pressed={isSelected}
                 data-stage-id={stage.id} data-x={position.x} data-y={position.y}
                 title={`${stage.name}: ${stage.width} × ${stage.length} ft, ${stage.heightIn} in high`}
-                className={`absolute block touch-none select-none overflow-hidden rounded-none p-0 shadow-none cursor-grab active:cursor-grabbing ${isSelected ? "z-10 ring-2 ring-ring ring-offset-2 ring-offset-background" : ""} ${!stage.valid ? "border-dashed border-destructive" : "border-foreground"}`}
+                className={`absolute block touch-none select-none overflow-hidden rounded-none p-0 shadow-none cursor-grab active:cursor-grabbing [&_svg]:size-full ${isSelected ? "z-10 ring-2 ring-ring ring-offset-2 ring-offset-background" : ""} ${!stage.valid ? "border-dashed border-destructive" : "border-foreground"}`}
                 style={{ left: position.x * zoom, top: position.y * zoom, width: stage.width * zoom, height: stage.length * zoom }}
                 onClick={() => setSelectedId(stage.id)}
                 onPointerDown={event => {

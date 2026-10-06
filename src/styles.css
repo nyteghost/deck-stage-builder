@@ -160,6 +160,7 @@
 .layout-holder-1 { stroke: var(--layout-holder-one); }
 .layout-holder-2 { stroke: var(--layout-holder-two); }
 .layout-holder-3 { stroke: var(--layout-holder-three); }
+.print-stage-body > * { min-width: 0; }
 
 .print-only { display: none; }
 
