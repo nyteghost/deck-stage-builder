@@ -1636,52 +1636,21 @@ function Index() {
           </section>
         </div>
 
-        <label className="no-print mb-6 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
-          <input
-            type="checkbox"
-            checked={showSecond}
-            onChange={(e) => setShowSecond(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          <span className="font-medium">Add a second stage</span>
-          <span className="text-xs text-muted-foreground">(its own width, length &amp; height)</span>
+        <label className="no-print mb-6 flex w-fit items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
+          <span className="font-medium">Number of stages</span>
+          <select
+            value={stageCount}
+            onChange={(e) => setStageCount(Number(e.target.value))}
+            className="rounded-md border border-border bg-background px-2 py-1 text-sm outline-none ring-ring focus:ring-2"
+          >
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">(each with its own width, length &amp; height)</span>
         </label>
-
-        {showSecond && (
-          <label className="no-print mb-6 ml-3 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
-            <input
-              type="checkbox"
-              checked={showThird}
-              onChange={(e) => setShowThird(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            <span className="font-medium">Add a third stage</span>
-          </label>
-        )}
-
-        {showThird && (
-          <label className="no-print mb-6 ml-3 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
-            <input
-              type="checkbox"
-              checked={showFourth}
-              onChange={(e) => setShowFourth(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            <span className="font-medium">Add a fourth stage</span>
-          </label>
-        )}
-
-        {showFourth && (
-          <label className="no-print mb-6 ml-3 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
-            <input
-              type="checkbox"
-              checked={showFifth}
-              onChange={(e) => setShowFifth(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            <span className="font-medium">Add a fifth stage</span>
-          </label>
-        )}
 
         <button
           type="button"
