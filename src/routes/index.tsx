@@ -1231,12 +1231,7 @@ function StagePanel({
                     const totals = usage;
                     return (
                       <>
-                        <div className="flex justify-between py-0.5">
-                          <span className="text-muted-foreground">Orientation</span>
-                          <span className="font-medium">
-                            {result.decks[0]?.w === 8 ? "8 ft across" : "8 ft deep"}
-                          </span>
-                        </div>
+                        <></>
                         <div className="mt-2 flex justify-between border-t border-border pt-2">
                           <span className="text-muted-foreground">Decks required</span>
                           <span className={`font-semibold ${overDecks ? "text-destructive" : ""}`}>
