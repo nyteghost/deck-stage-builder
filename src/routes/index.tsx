@@ -141,13 +141,21 @@ function runOptions(r: number, mostlyThree = false): { three: number; two: numbe
   return opts;
 }
 
-type Stock = { decks: number; one: number; two: number; three: number };
+type Stock = { decks: number; one: number; two: number; three: number; s5?: number; s6?: number; s7?: number };
+const STAIR_TYPES = [
+  { key: "s5", label: "5-step stairs" },
+  { key: "s6", label: "6-step stairs" },
+  { key: "s7", label: "7-step stairs" },
+] as const;
 
 const FULL_STOCK: Stock = {
   decks: INVENTORY.totalDecks,
   one: INVENTORY.holders.one.count,
   two: INVENTORY.holders.two.count,
   three: INVENTORY.holders.three.count,
+  s5: 1,
+  s6: 2,
+  s7: 5,
 };
 
 function planStage(
@@ -898,7 +906,8 @@ function StagePanel({
   const totalArea = width * length;
 
 
-  const usage = useMemo<Stock>(() => {
+  const [stairs, setStairs] = useState({ s5: 0, s6: 0, s7: 0 });
+  const baseUsage = useMemo<Stock>(() => {
     if (!result.ok) return { decks: 0, one: 0, two: 0, three: 0 };
     if (singleAllocation && result.decks.length === 1 && result.holders.length === 1) return singleAllocation.usage;
     const u = { decks: result.decks.length, one: 0, two: 0, three: 0 };
@@ -909,6 +918,7 @@ function StagePanel({
     }
     return { decks: u.decks * stageQuantity, one: u.one * stageQuantity, two: u.two * stageQuantity, three: u.three * stageQuantity };
   }, [result, stageQuantity, singleAllocation]);
+  const usage = useMemo<Stock>(() => ({ ...baseUsage, ...stairs }), [baseUsage, stairs]);
 
   useEffect(() => {
     onUsage?.(usage);
@@ -973,6 +983,33 @@ function StagePanel({
                   onChange={(e) => setLength(Number(e.target.value))}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
+              </div>
+
+              <div>
+                <div className="block text-sm font-medium">Stairs</div>
+                <div className="mt-1 grid grid-cols-3 gap-2">
+                  {STAIR_TYPES.map(({ key, label }) => {
+                    const max = stock[key] ?? 0;
+                    return (
+                      <label key={key} className="text-xs">
+                        <span className="text-muted-foreground">{label}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={max}
+                          step={1}
+                          value={stairs[key]}
+                          onChange={(e) => {
+                            const n = Math.max(0, Math.min(max, Math.floor(Number(e.target.value) || 0)));
+                            setStairs((prev) => ({ ...prev, [key]: n }));
+                          }}
+                          className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <span className="text-muted-foreground">{max} available</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               {isSingleDeckStage && (
@@ -1400,6 +1437,12 @@ function StagePanel({
                         <span className="font-medium">
                           {usage.one}
                         </span>
+                        {STAIR_TYPES.filter(({ key }) => stairs[key] > 0).map(({ key, label }) => (
+                          <Fragment key={key}>
+                            <span>{label}:</span>
+                            <span className="font-medium">{stairs[key]}</span>
+                          </Fragment>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1583,6 +1626,9 @@ function Index() {
         one: Math.max(0, current.one - used.one),
         two: Math.max(0, current.two - used.two),
         three: Math.max(0, current.three - used.three),
+        s5: Math.max(0, (current.s5 ?? 0) - (used.s5 ?? 0)),
+        s6: Math.max(0, (current.s6 ?? 0) - (used.s6 ?? 0)),
+        s7: Math.max(0, (current.s7 ?? 0) - (used.s7 ?? 0)),
       };
       out.push(current);
     }
@@ -1595,6 +1641,9 @@ function Index() {
       one: FULL_STOCK.one - remainingFinal.one,
       two: FULL_STOCK.two - remainingFinal.two,
       three: FULL_STOCK.three - remainingFinal.three,
+      s5: (FULL_STOCK.s5 ?? 0) - (remainingFinal.s5 ?? 0),
+      s6: (FULL_STOCK.s6 ?? 0) - (remainingFinal.s6 ?? 0),
+      s7: (FULL_STOCK.s7 ?? 0) - (remainingFinal.s7 ?? 0),
     }),
     [remainingFinal],
   );
@@ -1606,7 +1655,7 @@ function Index() {
         <header className="print-hide mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Stage Deck Planner</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck (4&#39;×8&#39;) + 8×2-deck (8&#39;×8&#39;) + 8×3-deck (12&#39;×8&#39;) holders.
+            Lay out a stage using the fewest 4&#39;×8&#39; decks possible. Inventory: 72 decks, 4×1-deck (4&#39;×8&#39;) + 8×2-deck (8&#39;×8&#39;) + 8×3-deck (12&#39;×8&#39;) holders, plus 1×5-step, 2×6-step and 5×7-step stairs.
             A <span className="font-medium" style={{ color: BRIDGE_COLOR }}>bridge</span> is a single deck spanning between two holders — adds coverage without using another holder.
           </p>
         </header>
@@ -1630,6 +1679,12 @@ function Index() {
               <span className="text-muted-foreground">1-deck holders: </span>
               {totalUsed.one} used / {remainingFinal.one} left
             </div>
+            {STAIR_TYPES.map(({ key, label }) => (
+              <div key={key}>
+                <span className="text-muted-foreground">{label}: </span>
+                {totalUsed[key] ?? 0} used / {remainingFinal[key] ?? 0} left
+              </div>
+            ))}
           </div>
         </div>
 
@@ -1644,6 +1699,9 @@ function Index() {
               <div><dt>3-deck holders</dt><dd className="mt-1 font-semibold">{totalUsed.three}</dd></div>
               <div><dt>2-deck holders</dt><dd className="mt-1 font-semibold">{totalUsed.two}</dd></div>
               <div><dt>1-deck holders</dt><dd className="mt-1 font-semibold">{totalUsed.one}</dd></div>
+              {STAIR_TYPES.map(({ key, label }) => (
+                <div key={key}><dt>{label}</dt><dd className="mt-1 font-semibold">{totalUsed[key] ?? 0}</dd></div>
+              ))}
             </dl>
           </section>
         </div>
