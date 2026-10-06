@@ -1624,6 +1624,15 @@ function Index() {
           <h1 className="text-3xl font-bold tracking-tight">
             {eventName.trim() || "Stage Deck Planner"}
           </h1>
+          <section className="mt-4 break-inside-avoid" aria-labelledby="print-items-title">
+            <h2 id="print-items-title" className="text-sm font-semibold">All items used (all stages)</h2>
+            <dl className="mt-2 grid grid-cols-4 gap-3 border-y border-border py-2 text-xs">
+              <div><dt>4′ × 8′ decks</dt><dd className="mt-1 font-semibold">{totalUsed.decks}</dd></div>
+              <div><dt>3-deck holders</dt><dd className="mt-1 font-semibold">{totalUsed.three}</dd></div>
+              <div><dt>2-deck holders</dt><dd className="mt-1 font-semibold">{totalUsed.two}</dd></div>
+              <div><dt>1-deck holders</dt><dd className="mt-1 font-semibold">{totalUsed.one}</dd></div>
+            </dl>
+          </section>
         </div>
 
         <label className="no-print mb-6 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
