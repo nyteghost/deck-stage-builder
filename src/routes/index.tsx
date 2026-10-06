@@ -1500,6 +1500,11 @@ function Index() {
   const [used1, setUsed1] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
   const [showThird, setShowThird] = useState(false);
   const [used2, setUsed2] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [showFourth, setShowFourth] = useState(false);
+  const [used3, setUsed3] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [showFifth, setShowFifth] = useState(false);
+  const [used4, setUsed4] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
+  const [used5, setUsed5] = useState<Stock>({ decks: 0, one: 0, two: 0, three: 0 });
   const [eventName, setEventName] = useState("");
   const [eventNameDraft, setEventNameDraft] = useState("");
   const [showEventModal, setShowEventModal] = useState(false);
@@ -1522,6 +1527,42 @@ function Index() {
     }),
     [remaining, used2],
   );
+  const remaining4 = useMemo<Stock>(
+    () => ({
+      decks: Math.max(0, remaining3.decks - used3.decks),
+      one: Math.max(0, remaining3.one - used3.one),
+      two: Math.max(0, remaining3.two - used3.two),
+      three: Math.max(0, remaining3.three - used3.three),
+    }),
+    [remaining3, used3],
+  );
+  const remaining5 = useMemo<Stock>(
+    () => ({
+      decks: Math.max(0, remaining4.decks - used4.decks),
+      one: Math.max(0, remaining4.one - used4.one),
+      two: Math.max(0, remaining4.two - used4.two),
+      three: Math.max(0, remaining4.three - used4.three),
+    }),
+    [remaining4, used4],
+  );
+  const remainingFinal = useMemo<Stock>(
+    () => ({
+      decks: Math.max(0, remaining5.decks - used5.decks),
+      one: Math.max(0, remaining5.one - used5.one),
+      two: Math.max(0, remaining5.two - used5.two),
+      three: Math.max(0, remaining5.three - used5.three),
+    }),
+    [remaining5, used5],
+  );
+  const totalUsed = useMemo<Stock>(
+    () => ({
+      decks: FULL_STOCK.decks - remainingFinal.decks,
+      one: FULL_STOCK.one - remainingFinal.one,
+      two: FULL_STOCK.two - remainingFinal.two,
+      three: FULL_STOCK.three - remainingFinal.three,
+    }),
+    [remainingFinal],
+  );
 
 
   return (
@@ -1534,6 +1575,28 @@ function Index() {
             A <span className="font-medium" style={{ color: BRIDGE_COLOR }}>bridge</span> is a single deck spanning between two holders — adds coverage without using another holder.
           </p>
         </header>
+
+        <div className="no-print mb-6 rounded-md border border-border bg-card p-4 text-sm shadow-sm">
+          <div className="font-semibold">Total inventory (all stages)</div>
+          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-4">
+            <div>
+              <span className="text-muted-foreground">Decks: </span>
+              {totalUsed.decks} used / {remainingFinal.decks} left
+            </div>
+            <div>
+              <span className="text-muted-foreground">3-deck holders: </span>
+              {totalUsed.three} used / {remainingFinal.three} left
+            </div>
+            <div>
+              <span className="text-muted-foreground">2-deck holders: </span>
+              {totalUsed.two} used / {remainingFinal.two} left
+            </div>
+            <div>
+              <span className="text-muted-foreground">1-deck holders: </span>
+              {totalUsed.one} used / {remainingFinal.one} left
+            </div>
+          </div>
+        </div>
 
         <div className="print-only mb-6">
           <h1 className="text-3xl font-bold tracking-tight">
@@ -1561,6 +1624,30 @@ function Index() {
               className="h-4 w-4 accent-primary"
             />
             <span className="font-medium">Add a third stage</span>
+          </label>
+        )}
+
+        {showThird && (
+          <label className="no-print mb-6 ml-3 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
+            <input
+              type="checkbox"
+              checked={showFourth}
+              onChange={(e) => setShowFourth(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="font-medium">Add a fourth stage</span>
+          </label>
+        )}
+
+        {showFourth && (
+          <label className="no-print mb-6 ml-3 inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm">
+            <input
+              type="checkbox"
+              checked={showFifth}
+              onChange={(e) => setShowFifth(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="font-medium">Add a fifth stage</span>
           </label>
         )}
 
@@ -1620,6 +1707,49 @@ function Index() {
               defaultLength={8}
               labelPrefix="S3-"
               stock={remaining3}
+              onUsage={setUsed3}
+            />
+          </div>
+        )}
+        {showThird && showFourth && (
+          <div>
+            <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
+              <div className="font-semibold">Left for Stage 4 after Stages 1–3</div>
+              <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
+                <div>{remaining4.decks} decks</div>
+                <div>{remaining4.three}× 3-deck holder</div>
+                <div>{remaining4.two}× 2-deck holder</div>
+                <div>{remaining4.one}× 1-deck holder</div>
+              </div>
+            </div>
+            <StagePanel
+              title="Stage 4"
+              defaultWidth={8}
+              defaultLength={8}
+              labelPrefix="S4-"
+              stock={remaining4}
+              onUsage={setUsed4}
+            />
+          </div>
+        )}
+        {showFourth && showFifth && (
+          <div>
+            <div className="print-hide mb-4 rounded-md border border-border bg-muted p-3 text-sm">
+              <div className="font-semibold">Left for Stage 5 after Stages 1–4</div>
+              <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground sm:grid-cols-4">
+                <div>{remaining5.decks} decks</div>
+                <div>{remaining5.three}× 3-deck holder</div>
+                <div>{remaining5.two}× 2-deck holder</div>
+                <div>{remaining5.one}× 1-deck holder</div>
+              </div>
+            </div>
+            <StagePanel
+              title="Stage 5"
+              defaultWidth={8}
+              defaultLength={8}
+              labelPrefix="S5-"
+              stock={remaining5}
+              onUsage={setUsed5}
             />
           </div>
         )}
