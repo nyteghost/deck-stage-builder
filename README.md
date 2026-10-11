@@ -56,7 +56,7 @@ To build the static site by hand (e.g. to host it anywhere yourself):
 
 ```bash
 GHPAGES_BASE=/repo-name/ npm run build   # or: bun run build
-# static site is in dist/client/
+# static site is in .output/public/
 ```
 
 `GHPAGES_BASE` must match the path the site is served under. Leave it unset for
