@@ -40,6 +40,27 @@ npm run preview
 
 `build` outputs the production bundle; `preview` serves it locally so you can
 check it before hosting.
+## Host on GitHub Pages
+
+The app is fully client-side, so it runs as a static site on GitHub Pages.
+
+1. Push this project to a GitHub repository (Lovable's GitHub menu, top right).
+2. In the repo: **Settings → Pages → Build and deployment → Source: "GitHub Actions"**.
+3. That's it — the included workflow (`.github/workflows/deploy-pages.yml`) builds
+   a static site and publishes it on every push to `main`.
+
+The site is served at `https://<your-user>.github.io/<repo-name>/`. The base path
+is read from the repository name automatically.
+
+To build the static site by hand (e.g. to host it anywhere yourself):
+
+```bash
+GHPAGES_BASE=/repo-name/ npm run build   # or: bun run build
+# static site is in dist/client/
+```
+
+`GHPAGES_BASE` must match the path the site is served under. Leave it unset for
+a user/organization repo (`<user>.github.io`) or a custom domain at the root.
 
 ## Run with Docker (no Node needed)
 
