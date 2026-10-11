@@ -7,3 +7,4 @@
 - [x] Print complete stage diagrams and summaries across pages
 - [x] Include current arranged and rotated Layout view in printing
 - [x] Include total decks and each holder type used across all stages in printing
+- [x] Run on GitHub Pages: static (prerendered) build with sub-path support + auto-deploy workflow

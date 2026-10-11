@@ -10,6 +10,8 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
+    // Matches GitHub Pages project sites (/<repo-name>/). "/" when built normally.
+    basepath: import.meta.env.BASE_URL.replace(/\/+$/, "") || "/",
   });
 
   return router;
