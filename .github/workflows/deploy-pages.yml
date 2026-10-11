@@ -39,15 +39,23 @@ jobs:
         env:
           GHPAGES_BASE: /${{ github.event.repository.name }}/
 
-      # Client-side routing fallback: any unknown URL serves the app.
-      - name: Add 404 fallback
-        run: cp dist/client/index.html dist/client/404.html
+      # Collect the static site into one folder (output location differs by
+      # environment), add a client-side routing fallback and disable Jekyll.
+      - name: Prepare static site
+        run: |
+          if [ -f .output/public/index.html ]; then SRC=.output/public
+          elif [ -f dist/client/index.html ]; then SRC=dist/client
+          else echo "No index.html found in build output"; ls -R .output dist 2>/dev/null | head -50; exit 1; fi
+          mkdir -p site
+          cp -r "$SRC"/. site/
+          cp site/index.html site/404.html
+          touch site/.nojekyll
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/client
+          path: site
 
   deploy:
     needs: build
